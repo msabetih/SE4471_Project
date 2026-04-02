@@ -6,7 +6,18 @@ import json
 import os
 import re
 from datetime import date
+from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
+
+_backend_dir = Path(__file__).resolve().parent
+_repo_root = _backend_dir.parent
+_env_kw = {"override": True, "encoding": "utf-8-sig"}
+load_dotenv(_repo_root / ".env", **_env_kw)
+load_dotenv(_backend_dir / ".env", **_env_kw)
+
+DEFAULT_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 try:
     from .rag import format_retrieved_context, retrieve as rag_retrieve
@@ -49,6 +60,7 @@ INTEREST_KEYWORDS = [
     "hiking",
     "nature",
     "museum",
+    "temple", 
     "shopping",
     "adventure",
     "relaxation",
@@ -81,6 +93,23 @@ def _normalized(text: str) -> str:
     return " ".join(text.strip().split())
 
 
+def _conversation_combined(prev_acc: str, prev_req: str, text: str) -> str:
+    """Join prior accumulated text, prior request line, and this turn's message without losing segments."""
+    parts: list[str] = []
+    for segment in ((prev_acc or "").strip(), (prev_req or "").strip(), (text or "").strip()):
+        if not segment:
+            continue
+        if segment not in parts:
+            parts.append(segment)
+    return _normalized(" ".join(parts))
+
+
+def _is_calendar_month_name(name: str) -> bool:
+    """True if *name* is only a month (e.g. 'April'), not a place like 'Juneau'."""
+    token = name.strip().rstrip(".,!?").lower()
+    return bool(token) and token in MONTH_NAMES
+
+
 def _extract_destination(text: str) -> str | None:
     lowered = text.lower()
     for raw in sorted(DESTINATION_CANONICAL, key=len, reverse=True):
@@ -94,7 +123,11 @@ def _extract_destination(text: str) -> str | None:
     for pattern in patterns:
         match = re.search(pattern, text)
         if match:
-            return match.group(1).strip()
+            candidate = match.group(1).strip()
+            first_word = candidate.split()[0]
+            if _is_calendar_month_name(first_word):
+                continue
+            return candidate
     return None
 
 
@@ -130,6 +163,22 @@ def _extract_budget_total(text: str) -> int | None:
     standalone = re.search(r"\$\s*(\d{2,6})", text)
     if standalone:
         return int(standalone.group(1))
+
+    usd = re.search(
+        r"\b(\d{1,3}(?:,\d{3})+|\d{2,6})\s*USD\b",
+        text,
+        re.IGNORECASE,
+    )
+    if usd:
+        return int(usd.group(1).replace(",", ""))
+
+    trip_budget = re.search(
+        r"(?:trip|total|budget)\D{0,12}(\d{1,3}(?:,\d{3})+|\d{2,6})\s*USD\b",
+        text,
+        re.IGNORECASE,
+    )
+    if trip_budget:
+        return int(trip_budget.group(1).replace(",", ""))
     return None
 
 
@@ -179,22 +228,31 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
     trip_state.set_stage("intake")
 
     text = _normalized(user_input)
-    start_date, end_date = _extract_dates(text)
+    prev_acc = (trip_state.progress.get("accumulated_context") or "").strip()
+    prev_req = (trip_state.trip_overview.get("request_text") or "").strip()
+    combined = _conversation_combined(prev_acc, prev_req, text)
 
+    trip_state.progress["accumulated_context"] = combined[:15000]
     trip_state.progress["raw_user_input"] = text
-    trip_state.trip_overview["request_text"] = text
-    trip_state.trip_overview["destination"] = _extract_destination(text) or trip_state.trip_overview.get(
+    #full conversation for API round-trips (not just this turn's line).
+    trip_state.trip_overview["request_text"] = combined
+
+    start_date, end_date = _extract_dates(combined)
+
+    trip_state.trip_overview["destination"] = _extract_destination(combined) or trip_state.trip_overview.get(
         "destination"
     )
-    trip_state.trip_overview["duration_days"] = _extract_duration_days(text) or trip_state.trip_overview.get(
+    trip_state.trip_overview["duration_days"] = _extract_duration_days(combined) or trip_state.trip_overview.get(
         "duration_days"
     )
-    trip_state.trip_overview["start_month"] = _extract_month(text) or trip_state.trip_overview.get("start_month")
+    trip_state.trip_overview["start_month"] = _extract_month(combined) or trip_state.trip_overview.get("start_month")
     trip_state.trip_overview["start_date"] = start_date or trip_state.trip_overview.get("start_date")
     trip_state.trip_overview["end_date"] = end_date or trip_state.trip_overview.get("end_date")
-    trip_state.trip_overview["interests"] = _extract_interests(text) or trip_state.trip_overview.get("interests", [])
+    prev_interests = list(trip_state.trip_overview.get("interests") or [])
+    from_combined = _extract_interests(combined)
+    trip_state.trip_overview["interests"] = sorted(set(prev_interests + from_combined))
 
-    budget_total = _extract_budget_total(text)
+    budget_total = _extract_budget_total(combined)
     if budget_total:
         trip_state.constraints["budget_total_usd"] = budget_total
 
@@ -205,11 +263,11 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
             2,
         )
 
-    group_size = _extract_group_size(text)
+    group_size = _extract_group_size(combined)
     if group_size:
         trip_state.user_profile["group_size"] = group_size
 
-    lowered = text.lower()
+    lowered = combined.lower()
     if "family" in lowered:
         trip_state.user_profile["traveler_type"] = "family"
     elif "couple" in lowered:
@@ -270,11 +328,12 @@ User request:
 
     try:
         client = OpenAI(api_key=api_key)
-        response = client.responses.create(
+        response = client.chat.completions.create(
             model=model,
-            input=prompt,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5,
         )
-        raw = (response.output_text or "").strip()
+        raw = (response.choices[0].message.content or "").strip()
     except Exception:
         return []
 
@@ -291,7 +350,7 @@ User request:
     return lines[:3]
 
 
-def clarify(state: TripState | dict[str, Any], model: str = "gpt-4.1-mini") -> TripState:
+def clarify(state: TripState | dict[str, Any], model: str = DEFAULT_OPENAI_MODEL) -> TripState:
     """Generate follow-up questions for missing planning details."""
     trip_state = ensure_trip_state(state)
     trip_state.set_stage("clarify")
@@ -400,36 +459,18 @@ def _local_generate(state: TripState) -> str:
 
 
 def _openai_generate(state: TripState, model: str) -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return ""
-
+    """Delegates to itinerary.generate_itinerary (JSON → Markdown + optional structured dict)."""
     try:
-        from openai import OpenAI
+        from .itinerary import generate_itinerary
     except ImportError:
-        return ""
+        from itinerary import generate_itinerary
 
-    context = format_retrieved_context(state.progress.get("retrieved_chunks", []))
-    prompt = f"""
-Create a concise travel recommendation based on this state and retrieved context.
-If there are validation issues, include a short warning section.
-
-TripState:
-{json.dumps(state.to_dict(), indent=2)}
-
-Retrieved context:
-{context}
-""".strip()
-
-    try:
-        client = OpenAI(api_key=api_key)
-        response = client.responses.create(model=model, input=prompt)
-        return (response.output_text or "").strip()
-    except Exception:
-        return ""
+    markdown, structured = generate_itinerary(state, model=model)
+    state.progress["itinerary_structured"] = structured
+    return markdown
 
 
-def generate(state: TripState | dict[str, Any], model: str = "gpt-4.1-mini") -> TripState:
+def generate(state: TripState | dict[str, Any], model: str = DEFAULT_OPENAI_MODEL) -> TripState:
     """Create a final recommendation using retrieved context and validated state."""
     trip_state = ensure_trip_state(state)
     trip_state.set_stage("generate")
@@ -442,17 +483,68 @@ def generate(state: TripState | dict[str, Any], model: str = "gpt-4.1-mini") -> 
     return trip_state
 
 
+def _core_trip_fields_complete(state: TripState) -> bool:
+    """Minimum fields needed before generating an itinerary (matches clarify missing-field logic)."""
+    if not state.trip_overview.get("destination"):
+        return False
+    duration = state.trip_overview.get("duration_days")
+    if duration is None or (isinstance(duration, int) and duration < 1):
+        return False
+    if not state.constraints.get("budget_total_usd"):
+        return False
+    if not state.trip_overview.get("interests"):
+        return False
+    return True
+
+
+def _clarification_hold_message(state: TripState) -> str:
+    """Shown when we skip generation until the user sends another message with missing details."""
+    qs = state.progress.get("clarifying_questions") or []
+    lines = [
+        "## More information needed",
+        "",
+        "Reply in your **next message** with answers (your trip details are kept in `state`).",
+        "",
+    ]
+    if qs:
+        for i, q in enumerate(qs, 1):
+            lines.append(f"{i}. {q}")
+    else:
+        lines.append(
+            "Please add: destination, trip length (days), total budget (USD), and interests "
+            "(e.g. food, temples, beaches)."
+        )
+    lines.extend(
+        [
+            "",
+            "*No full itinerary has been generated yet. After you answer, send another request with the same "
+            "`state` from this response so we can build the plan.*",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def run_workflow(
     user_input: str,
     state: TripState | dict[str, Any] | None = None,
     top_k: int = 3,
-    model: str = "gpt-4.1-mini",
+    model: str = DEFAULT_OPENAI_MODEL,
 ) -> TripState:
-    """Run full 5-stage workflow: intake -> clarify -> retrieve -> validate -> generate."""
+    """Run full workflow: intake -> clarify -> retrieve -> validate -> generate (if details complete)."""
     trip_state = intake(user_input, state=state)
     trip_state = clarify(trip_state, model=model)
     trip_state = retrieve(trip_state, top_k=top_k)
     trip_state = validate(trip_state)
+
+    trip_state.progress["awaiting_clarification"] = False
+    if not _core_trip_fields_complete(trip_state):
+        trip_state.progress["awaiting_clarification"] = True
+        trip_state.progress["final_recommendation"] = _clarification_hold_message(trip_state)
+        trip_state.progress["itinerary_structured"] = None
+        trip_state.progress["itinerary_llm_error"] = ""
+        trip_state.set_stage("clarify")
+        return trip_state
+
     trip_state = generate(trip_state, model=model)
     return trip_state
 
@@ -463,7 +555,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the travel workflow pipeline")
     parser.add_argument("query", nargs="+", help="User trip request")
     parser.add_argument("--top-k", type=int, default=3, help="Number of retrieval chunks")
-    parser.add_argument("--model", default="gpt-4.1-mini", help="OpenAI model for clarify/generate")
+    parser.add_argument(
+        "--model",
+        default=DEFAULT_OPENAI_MODEL,
+        help="OpenAI model for clarify/generate (or set OPENAI_MODEL env)",
+    )
     args = parser.parse_args()
 
     request = " ".join(args.query)

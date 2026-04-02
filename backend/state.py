@@ -8,6 +8,22 @@ from typing import Any
 WORKFLOW_STAGES = ("intake", "clarify", "retrieve", "validate", "generate")
 
 
+def _normalize_client_state_payload(data: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Accept either a flat TripState dict or a full /chat response body where the
+    payload lives under `state` (common when clients forward the entire JSON response).
+    """
+    if not data:
+        return {}
+    if "user_profile" in data:
+        return data
+    for key in ("state", "data"):
+        inner = data.get(key)
+        if isinstance(inner, dict) and "user_profile" in inner:
+            return inner
+    return data
+
+
 def _default_user_profile() -> dict[str, Any]:
     return {
         "traveler_type": None,  # e.g., solo, couple, family, friends
@@ -49,7 +65,11 @@ def _default_progress() -> dict[str, Any]:
         "validation_issues": [],
         "is_valid": True,
         "final_recommendation": "",
+        "itinerary_structured": None,  
+        "itinerary_llm_error": "", 
+        "awaiting_clarification": False,  
         "raw_user_input": "",
+        "accumulated_context": "",  
     }
 
 
@@ -77,11 +97,51 @@ class TripState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TripState":
+        data = _normalize_client_state_payload(data)
         state = cls()
-        state.user_profile.update(data.get("user_profile", {}))
-        state.trip_overview.update(data.get("trip_overview", {}))
-        state.constraints.update(data.get("constraints", {}))
-        state.progress.update(data.get("progress", {}))
+
+        def merge_skip_none(target: dict[str, Any], incoming: dict[str, Any] | None) -> None:
+            if not incoming:
+                return
+            for key, val in incoming.items():
+                if val is not None:
+                    target[key] = val
+
+        def merge_trip_overview(target: dict[str, Any], incoming: dict[str, Any] | None) -> None:
+            """Merge API JSON into trip_overview; do not let `interests: []` wipe prior session."""
+            if not incoming:
+                return
+            for key, val in incoming.items():
+                if val is None:
+                    continue
+                if key == "interests" and val == []:
+                    continue
+                if key == "request_text" and isinstance(val, str):
+                    old = target.get("request_text") or ""
+                    #keep a longer prior message if the client sends only the latest line (multi-turn).
+                    if (
+                        len(old) > len(val) + 20
+                        and any(x in old for x in ("USD", "budget", "trip to", "days"))
+                        and not any(x in val for x in ("USD", "budget"))
+                    ):
+                        continue
+                target[key] = val
+
+        def merge_progress(target: dict[str, Any], incoming: dict[str, Any] | None) -> None:
+            if not incoming:
+                return
+            for key, val in incoming.items():
+                if val is None:
+                    continue
+                #never let the client wipe conversation history with an empty string.
+                if key == "accumulated_context" and val == "":
+                    continue
+                target[key] = val
+
+        merge_skip_none(state.user_profile, data.get("user_profile"))
+        merge_trip_overview(state.trip_overview, data.get("trip_overview"))
+        merge_skip_none(state.constraints, data.get("constraints"))
+        merge_progress(state.progress, data.get("progress"))
         return state
 
 

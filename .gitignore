@@ -1,0 +1,43 @@
+# Secrets and local env
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# Packaging / tooling
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Chroma / local vector DB (regenerated from corpus)
+backend/.chromadb/
+
+# Node (frontend)
+node_modules/
+frontend/dist/
+frontend/build/
+.npm
+
+# IDE / OS
+.vs/
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
