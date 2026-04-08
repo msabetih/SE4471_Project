@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { jsPDF } from "jspdf";
 
 const API_BASE = "http://127.0.0.1:8001";
 
@@ -13,6 +14,7 @@ const initialForm = {
   startDate: "",
   endDate: "",
 };
+
 function App() {
   const [messages, setMessages] = useState([
     {
@@ -35,6 +37,12 @@ function App() {
   const canSubmitForm = useMemo(() => {
     return Object.values(form).some((value) => String(value).trim() !== "");
   }, [form]);
+
+  const latestAssistantMessage = useMemo(() => {
+    return [...messages]
+      .reverse()
+      .find((msg) => msg.role === "assistant" && msg.content?.trim());
+  }, [messages]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -186,250 +194,348 @@ function App() {
     setInput("");
   };
 
-return (
-  <div className="app-shell">
-    <div className="app-background" />
-    <main className="app-container">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">SE4471 Project</p>
-          <h1>AI Travel Planner</h1>
-          <p className="hero-subtitle">
-            Plan trips with retrieval-grounded recommendations, workflow
-            stages, and structured day-by-day itineraries.
-          </p>
-        </div>
+  const handleExportPdf = () => {
+    if (!latestAssistantMessage?.content) return;
 
-        <div className="status-card">
-          <div className="status-row">
-            <span className="status-label">Stage</span>
-            <span className="pill">{lastMeta.workflowStage || "ready"}</span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Clarification</span>
-            <span
-              className={`pill ${
-                lastMeta.awaitingClarification ? "warn" : "ok"
-              }`}
-            >
-              {lastMeta.awaitingClarification ? "needed" : "complete"}
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Validation issues</span>
-            <span className="pill">
-              {lastMeta.validationIssues.length}
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Sources retrieved</span>
-            <span className="pill">
-              {lastMeta.retrievedChunks.length}
-            </span>
-          </div>
-        </div>
-      </header>
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
 
-      <section className="layout-grid">
-        <aside className="panel form-panel">
-          <div className="panel-header">
-            <h2>Trip Parameters</h2>
-            <p>Use the form for a fast first draft, then refine in chat.</p>
-          </div>
+    const destination =
+      form.destination?.trim() ||
+      tripState?.trip_overview?.destination ||
+      "trip";
 
-          <form className="trip-form" onSubmit={handleFormSubmit}>
-            {/* Destination */}
-            <label>
-              <span>Destination</span>
-              <input
-                name="destination"
-                value={form.destination}
-                onChange={handleFormChange}
-                placeholder="Japan"
-              />
-            </label>
+    const safeName = String(destination).toLowerCase().replace(/\s+/g, "-");
+    const fileName = `${safeName}-itinerary.pdf`;
 
-            {/* Duration + Budget */}
-            <div className="two-col">
-              <label>
-                <span>Duration (days)</span>
-                <input
-                  name="duration"
-                  value={form.duration}
-                  onChange={handleFormChange}
-                  placeholder="7"
-                />
-              </label>
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const maxWidth = pageWidth - margin * 2;
+    const lineHeight = 7;
 
-              <label>
-                <span>Budget (USD)</span>
-                <input
-                  name="budget"
-                  value={form.budget}
-                  onChange={handleFormChange}
-                  placeholder="2000"
-                />
-              </label>
-            </div>
+    let y = margin;
 
-            {/* Group + Dates */}
-            <div className="two-col">
-              <label>
-                <span>Group size</span>
-                <input
-                  name="groupSize"
-                  value={form.groupSize}
-                  onChange={handleFormChange}
-                  placeholder="2"
-                />
-              </label>
+    const cleanText = latestAssistantMessage.content
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/\r/g, "");
 
-              <label>
-                <span>Start date</span>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={form.startDate}
-                  onChange={handleFormChange}
-                />
-              </label>
-            </div>
+    const lines = cleanText.split("\n");
 
-            {/* End Date */}
-            <div className="two-col">
-              <label>
-                <span>End date</span>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={form.endDate}
-                  onChange={handleFormChange}
-                />
-              </label>
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Travel Itinerary", margin, y);
+    y += 10;
 
-              {/* empty space for alignment */}
-              <div />
-            </div>
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
 
-            {/* Interests */}
-            <label>
-              <span>Interests</span>
-              <input
-                name="interests"
-                value={form.interests}
-                onChange={handleFormChange}
-                placeholder="food, culture, temples, shopping"
-              />
-            </label>
+    for (const rawLine of lines) {
+      const line = rawLine.trimEnd();
 
-            {/* Dietary */}
-            <label>
-              <span>Dietary restrictions</span>
-              <input
-                name="dietaryRestrictions"
-                value={form.dietaryRestrictions}
-                onChange={handleFormChange}
-                placeholder="vegetarian, halal, nut allergy"
-              />
-            </label>
+      if (line === "") {
+        y += lineHeight;
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        continue;
+      }
 
-            {/* Buttons */}
-            <div className="button-row">
-              <button
-                type="submit"
-                className="primary-btn"
-                disabled={loading || !canSubmitForm}
-              >
-                {loading ? "Planning..." : "Generate from Form"}
-              </button>
+      const isH1 = line.startsWith("# ");
+      const isH2 = line.startsWith("## ");
+      const isH3 = line.startsWith("### ");
+      const isBullet = line.startsWith("- ");
+      const isBoldLabel = line.startsWith("**") && line.endsWith("**");
 
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={handleReset}
-                disabled={loading}
-              >
-                Reset
-              </button>
-            </div>
-          </form>
+      let text = line
+        .replace(/^###\s*/, "")
+        .replace(/^##\s*/, "")
+        .replace(/^#\s*/, "")
+        .replace(/\*\*/g, "");
 
-          {/* Sources */}
-          {lastMeta.retrievedChunks.length > 0 && (
-            <div className="sources-box">
-              <h3>Retrieved Sources</h3>
-              <ul>
-                {lastMeta.retrievedChunks.map((chunk, index) => (
-                  <li key={`${chunk.source}-${chunk.chunk_index}-${index}`}>
-                    <strong>{chunk.title || chunk.source}</strong>
-                    <div className="source-meta">
-                      {chunk.source} · chunk {chunk.chunk_index}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </aside>
+      if (isH1) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+      } else if (isH2) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+      } else if (isH3) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+      } else if (isBoldLabel) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+      }
 
-        {/* Chat */}
-        <section className="panel chat-panel">
-          <div className="panel-header">
-            <h2>Planner Chat</h2>
-            <p>
-              Answer follow-up questions here and review the generated
-              itinerary.
+      if (isBullet) {
+        text = "• " + text.replace(/^- /, "");
+      }
+
+      const wrapped = doc.splitTextToSize(text, maxWidth);
+
+      for (const wrappedLine of wrapped) {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(wrappedLine, margin, y);
+        y += lineHeight;
+      }
+
+      y += 1;
+    }
+
+    doc.save(fileName);
+  };
+
+  return (
+    <div className="app-shell">
+      <div className="app-background" />
+      <main className="app-container">
+        <header className="hero">
+          <div>
+            <p className="eyebrow">SE4471 Project</p>
+            <h1>AI Travel Planner</h1>
+            <p className="hero-subtitle">
+              Plan trips with retrieval-grounded recommendations, workflow
+              stages, and structured day-by-day itineraries.
             </p>
           </div>
 
-          <div className="messages">
-            {messages.map((msg, index) => (
-              <article
-                key={index}
-                className={`message-bubble ${
-                  msg.role === "user"
-                    ? "user-bubble"
-                    : "assistant-bubble"
+          <div className="status-card">
+            <div className="status-row">
+              <span className="status-label">Stage</span>
+              <span className="pill">{lastMeta.workflowStage || "ready"}</span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Clarification</span>
+              <span
+                className={`pill ${
+                  lastMeta.awaitingClarification ? "warn" : "ok"
                 }`}
               >
-                <div className="message-role">
-                  {msg.role === "user" ? "You" : "Assistant"}
-                </div>
-                <div className="markdown-body">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-              </article>
-            ))}
+                {lastMeta.awaitingClarification ? "needed" : "complete"}
+              </span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Validation issues</span>
+              <span className="pill">{lastMeta.validationIssues.length}</span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Sources retrieved</span>
+              <span className="pill">{lastMeta.retrievedChunks.length}</span>
+            </div>
+          </div>
+        </header>
 
-            {loading && (
-              <div className="typing-indicator">
-                <span />
-                <span />
-                <span />
+        <section className="layout-grid">
+          <aside className="panel form-panel">
+            <div className="panel-header">
+              <h2>Trip Parameters</h2>
+              <p>Use the form for a fast first draft, then refine in chat.</p>
+            </div>
+
+            <form className="trip-form" onSubmit={handleFormSubmit}>
+              <label>
+                <span>Destination</span>
+                <input
+                  name="destination"
+                  value={form.destination}
+                  onChange={handleFormChange}
+                  placeholder="Japan"
+                />
+              </label>
+
+              <div className="two-col">
+                <label>
+                  <span>Duration (days)</span>
+                  <input
+                    name="duration"
+                    value={form.duration}
+                    onChange={handleFormChange}
+                    placeholder="7"
+                  />
+                </label>
+
+                <label>
+                  <span>Budget (USD)</span>
+                  <input
+                    name="budget"
+                    value={form.budget}
+                    onChange={handleFormChange}
+                    placeholder="2000"
+                  />
+                </label>
+              </div>
+
+              <div className="two-col">
+                <label>
+                  <span>Group size</span>
+                  <input
+                    name="groupSize"
+                    value={form.groupSize}
+                    onChange={handleFormChange}
+                    placeholder="2"
+                  />
+                </label>
+
+                <label>
+                  <span>Start date</span>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={form.startDate}
+                    onChange={handleFormChange}
+                  />
+                </label>
+              </div>
+
+              <div className="two-col">
+                <label>
+                  <span>End date</span>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={form.endDate}
+                    onChange={handleFormChange}
+                  />
+                </label>
+
+                <div />
+              </div>
+
+              <label>
+                <span>Interests</span>
+                <input
+                  name="interests"
+                  value={form.interests}
+                  onChange={handleFormChange}
+                  placeholder="food, culture, temples, shopping"
+                />
+              </label>
+
+              <label>
+                <span>Dietary restrictions</span>
+                <input
+                  name="dietaryRestrictions"
+                  value={form.dietaryRestrictions}
+                  onChange={handleFormChange}
+                  placeholder="vegetarian, halal, nut allergy"
+                />
+              </label>
+
+              <div className="button-row">
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={loading || !canSubmitForm}
+                >
+                  {loading ? "Planning..." : "Generate from Form"}
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleReset}
+                  disabled={loading}
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+
+            {lastMeta.retrievedChunks.length > 0 && (
+              <div className="sources-box">
+                <h3>Retrieved Sources</h3>
+                <ul>
+                  {lastMeta.retrievedChunks.map((chunk, index) => (
+                    <li key={`${chunk.source}-${chunk.chunk_index}-${index}`}>
+                      <strong>{chunk.title || chunk.source}</strong>
+                      <div className="source-meta">
+                        {chunk.source} · chunk {chunk.chunk_index}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
-          </div>
+          </aside>
 
-          <form className="chat-form" onSubmit={handleChatSubmit}>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type a follow-up, answer clarifying questions, or refine the itinerary..."
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              className="primary-btn"
-              disabled={loading || !input.trim()}
-            >
-              Send
-            </button>
-          </form>
+          <section className="panel chat-panel">
+            <div className="panel-header panel-header-row">
+              <div>
+                <h2>Planner Chat</h2>
+                <p>
+                  Answer follow-up questions here and review the generated
+                  itinerary.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-btn export-btn"
+                onClick={handleExportPdf}
+                disabled={!latestAssistantMessage || loading}
+              >
+                Export latest answer as PDF
+              </button>
+            </div>
+
+            <div className="messages">
+              {messages.map((msg, index) => (
+                <article
+                  key={index}
+                  className={`message-bubble ${
+                    msg.role === "user"
+                      ? "user-bubble"
+                      : "assistant-bubble"
+                  }`}
+                >
+                  <div className="message-role">
+                    {msg.role === "user" ? "You" : "Assistant"}
+                  </div>
+                  <div className="markdown-body">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                </article>
+              ))}
+
+              {loading && (
+                <div className="typing-indicator">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              )}
+            </div>
+
+            <form className="chat-form" onSubmit={handleChatSubmit}>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type a follow-up, answer clarifying questions, or refine the itinerary..."
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={loading || !input.trim()}
+              >
+                Send
+              </button>
+            </form>
+          </section>
         </section>
-      </section>
-    </main>
-  </div>
-);
+      </main>
+    </div>
+  );
 }
 
 export default App;

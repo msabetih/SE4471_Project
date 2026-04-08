@@ -418,3 +418,28 @@ input[type="date"] {
     max-width: 100%;
   }
 }
+.panel-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.export-btn {
+  white-space: nowrap;
+}
+
+.export-target {
+  background: #0f172a;
+}
+
+@media (max-width: 640px) {
+  .panel-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-btn {
+    width: 100%;
+  }
+}
