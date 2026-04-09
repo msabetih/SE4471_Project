@@ -171,6 +171,24 @@ def _state_for_llm_prompt(state: TripState) -> dict[str, Any]:
     return payload
 
 
+def _weather_prompt_block(state: TripState) -> str:
+    summary = (state.progress.get("weather_summary") or "").strip()
+    err = (state.progress.get("weather_error") or "").strip()
+    meta = state.progress.get("weather_meta") or {}
+    mode = str(meta.get("mode") or "").strip()
+    if summary:
+        if mode == "climate_normals":
+            return (
+                summary
+                + "\n\nTreat this as seasonal trend guidance only. "
+                "Do not present it as exact day-by-day weather."
+            )
+        return summary
+    if err and not err.startswith("skipped_"):
+        return f"(Weather tool error: {err})"
+    return "(No weather forecast available — add trip dates or check connectivity.)"
+
+
 def _clip_context(context: str, max_chars: int = _MAX_CONTEXT_CHARS) -> str:
     if len(context) <= max_chars:
         return context
@@ -522,6 +540,10 @@ Rules:
 - {allocation_ranges}
 - Each day subtitle should include the active destination for that day.
 - Do not place travel-to-the-next-country days before the final allocated day for the current destination unless the split explicitly leaves room for that transfer.
+- Use the **External tool — weather** section below for same-day outdoor vs indoor balance and packing hints. Do not invent temperatures or precipitation; only use what appears there.
+
+External tool — weather (Open-Meteo forecast; not from the markdown corpus):
+{_weather_prompt_block(state)}
 
 TripState (metadata only — full doc text is under Retrieved context):
 {json.dumps(_state_for_llm_prompt(state), indent=2)}
@@ -540,6 +562,9 @@ Use TripState and retrieved context. Cite sources as (Source: filename.md) using
 Express all budget and estimated cost amounts in CAD.
 
 If multiple destinations are requested and TripState includes `destination_day_allocations`, that split is authoritative and must be followed exactly. Do not keep an older split from earlier turns.
+
+External tool — weather:
+{_weather_prompt_block(state)}
 
 TripState (metadata only):
 {json.dumps(_state_for_llm_prompt(state), indent=2)}

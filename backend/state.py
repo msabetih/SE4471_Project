@@ -78,7 +78,10 @@ def _default_progress() -> dict[str, Any]:
         "itinerary_llm_error": "", 
         "awaiting_clarification": False,  
         "raw_user_input": "",
-        "accumulated_context": "",  
+        "accumulated_context": "",
+        "weather_summary": "",
+        "weather_error": "",
+        "weather_meta": None,
     }
 
 

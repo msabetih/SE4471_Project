@@ -355,43 +355,51 @@ def _extract_destination_day_allocations(text: str, destinations: list[str]) -> 
 
 
 def _extract_budget_total(text: str) -> int | None:
+    # Strip ISO dates so numeric range parsing cannot mistake "2026-10-01" for a budget range.
+    cleaned_text = re.sub(r"\b20\d{2}-\d{2}-\d{2}\b", " ", text)
+
     explicit_update_patterns = [
         r"(?:budget|total budget|new budget)\D{0,20}(?:is|to|at|of)\D{0,10}\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\b",
         r"(?:change|make|set|update|raise|lower)\D{0,20}(?:budget|it)\D{0,20}(?:to|at)\D{0,10}\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\b",
-        r"\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:CAD|C\$)\s*(?:budget|total)?\b",
+        r"\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:USD|CAD|US\$|C\$)\s*(?:budget|total)?\b",
     ]
     for pattern in explicit_update_patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
+        match = re.search(pattern, cleaned_text, re.IGNORECASE)
         if match:
             return int(match.group(1).replace(",", ""))
 
-    range_match = re.search(r"\$?(\d{2,6})\s*(?:-|to)\s*\$?(\d{2,6})", text, re.IGNORECASE)
+    # Only accept ranges when budget intent is explicit to avoid date-like false positives.
+    range_match = re.search(
+        r"(?:budget|total|spend|up to|under|max(?:imum)?)\D{0,20}\$?(\d{2,6})\s*(?:-|to)\s*\$?(\d{2,6})",
+        cleaned_text,
+        re.IGNORECASE,
+    )
     if range_match:
         return int(range_match.group(2))
 
     budget_match = re.search(
         r"(?:budget|under|max(?:imum)?|spend|up to)\D{0,15}\$?\s*(\d{2,6})",
-        text,
+        cleaned_text,
         re.IGNORECASE,
     )
     if budget_match:
         return int(budget_match.group(1))
 
-    standalone = re.search(r"\$\s*(\d{2,6})", text)
+    standalone = re.search(r"\$\s*(\d{2,6})", cleaned_text)
     if standalone:
         return int(standalone.group(1))
 
     currency_amount = re.search(
-        r"\b(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:CAD|C\$)\b",
-        text,
+        r"\b(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:USD|CAD|US\$|C\$)\b",
+        cleaned_text,
         re.IGNORECASE,
     )
     if currency_amount:
         return int(currency_amount.group(1).replace(",", ""))
 
     trip_budget = re.search(
-        r"(?:trip|total|budget)\D{0,12}(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:CAD|C\$)\b",
-        text,
+        r"(?:trip|total|budget)\D{0,12}(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:USD|CAD|US\$|C\$)\b",
+        cleaned_text,
         re.IGNORECASE,
     )
     if trip_budget:
@@ -586,6 +594,20 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
 
     if end_date:
         trip_state.trip_overview["end_date"] = end_date
+
+    # If user explicitly updates duration but does not provide a new end date in this turn,
+    # recompute end_date from start_date so date-dependent tools (e.g., weather) stay in sync.
+    if (
+        latest_duration_days is not None
+        and latest_end_date is None
+        and trip_state.trip_overview.get("start_date")
+    ):
+        try:
+            start_for_duration = date.fromisoformat(str(trip_state.trip_overview["start_date"]))
+            recomputed_end = start_for_duration + timedelta(days=max(1, int(latest_duration_days)) - 1)
+            trip_state.trip_overview["end_date"] = recomputed_end.isoformat()
+        except ValueError:
+            pass
 
     latest_interests = _extract_interests(text)
     combined_interests = _extract_interests(combined)
@@ -927,6 +949,11 @@ def _local_generate(state: TripState) -> str:
         lines.append("- Validation notes: " + " | ".join(issues))
     if retrieval_error:
         lines.append(f"- Retrieval note: context lookup failed ({retrieval_error}).")
+    wx = (state.progress.get("weather_summary") or "").strip()
+    if wx:
+        lines.append("")
+        lines.append("Weather (external tool):")
+        lines.append(wx)
     lines.append("")
     lines.append("Retrieved context:")
     lines.append(context)
@@ -953,6 +980,22 @@ def generate(state: TripState | dict[str, Any], model: str = DEFAULT_OPENAI_MODE
     recommendation = _openai_generate(trip_state, model=model)
     if not recommendation:
         recommendation = _local_generate(trip_state)
+
+    weather_summary = (trip_state.progress.get("weather_summary") or "").strip()
+    if weather_summary:
+        lowered = recommendation.lower()
+        if "weather (external tool):" not in lowered and "## weather" not in lowered:
+            weather_block = "\n\n## Weather guidance\n\n" + weather_summary + "\n"
+            marker = "\n## Sources used"
+            marker_idx = recommendation.find(marker)
+            if marker_idx != -1:
+                recommendation = (
+                    recommendation[:marker_idx].rstrip()
+                    + weather_block
+                    + recommendation[marker_idx:]
+                )
+            else:
+                recommendation = recommendation.rstrip() + weather_block
 
     trip_state.progress["final_recommendation"] = recommendation
     return trip_state
@@ -1028,6 +1071,13 @@ def run_workflow(
         trip_state.progress["itinerary_llm_error"] = ""
         trip_state.set_stage("clarify")
         return trip_state
+
+    try:
+        from .weather_tool import apply_weather_to_progress
+    except ImportError:
+        from weather_tool import apply_weather_to_progress
+
+    apply_weather_to_progress(trip_state.trip_overview, trip_state.progress)
 
     trip_state = generate(trip_state, model=model)
     return trip_state

@@ -147,6 +147,22 @@ function CityStopsMap({ markers, error, large = false, onExpand }) {
   );
 }
 
+function computeEndDate(startDate, durationValue) {
+  const durationDays = Number.parseInt(String(durationValue), 10);
+  if (!startDate || !Number.isFinite(durationDays) || durationDays < 1) {
+    return "";
+  }
+  const start = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(start.getTime())) {
+    return "";
+  }
+  start.setDate(start.getDate() + durationDays - 1);
+  const yyyy = start.getFullYear();
+  const mm = String(start.getMonth() + 1).padStart(2, "0");
+  const dd = String(start.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function App() {
   const [messages, setMessages] = useState([
     {
@@ -169,6 +185,8 @@ function App() {
     routeError: "",
     cityMarkers: [],
     cityMarkerError: "",
+    weatherSummary: "",
+    weatherError: "",
   });
 
   const canSubmitForm = useMemo(() => {
@@ -215,7 +233,16 @@ function App() {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "startDate" || name === "duration") {
+        const autoEnd = computeEndDate(next.startDate, next.duration);
+        if (autoEnd) {
+          next.endDate = autoEnd;
+        }
+      }
+      return next;
+    });
   };
 
   const normalizeDestinationSplit = (rawValue) => {
@@ -338,6 +365,7 @@ function App() {
         );
       }
 
+      const prog = data.state?.progress || {};
       setLastMeta({
         workflowStage: data.workflow_stage || "",
         awaitingClarification: Boolean(data.awaiting_clarification),
@@ -347,6 +375,8 @@ function App() {
         routeError: data.route_error || "",
         cityMarkers: data.city_markers || [],
         cityMarkerError: data.city_marker_error || "",
+        weatherSummary: prog.weather_summary || "",
+        weatherError: prog.weather_error || "",
       });
 
       setMessages((prev) => [
@@ -397,6 +427,8 @@ function App() {
       routeError: "",
       cityMarkers: [],
       cityMarkerError: "",
+      weatherSummary: "",
+      weatherError: "",
     });
     setMessages([
       {
@@ -763,6 +795,18 @@ function App() {
               </div>
             )}
 
+            {(lastMeta.weatherSummary || lastMeta.weatherError) && (
+              <div className="sources-box weather-box">
+                <h3>Weather (Open-Meteo)</h3>
+                {lastMeta.weatherSummary ? (
+                  <div className="weather-summary markdown-body">
+                    <ReactMarkdown>{lastMeta.weatherSummary}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="source-meta">{lastMeta.weatherError}</p>
+                )}
+              </div>
+            )}
           </aside>
 
           <section className="panel chat-panel">

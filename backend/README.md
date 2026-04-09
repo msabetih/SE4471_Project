@@ -7,6 +7,7 @@ The backend has four layers:
 3. **`workflow.py`** — Runs the pipeline: `intake → clarify → retrieve → validate → generate` (generation is skipped until core trip fields are complete).
 4. **`main.py`** — FastAPI app: `GET /health`, `POST /chat` (runs `run_workflow`).
 5. **`itinerary.py`** — Builds a structured itinerary (JSON from the model → canonical Markdown) using `TripState`, validation notes, and **retrieved context**; prompts require corpus citations by filename.
+6. **`weather_tool.py`** — **External tool (Tier 2):** Open-Meteo geocoding + daily forecast; runs **after** required trip fields are complete and **before** `generate`. No API key. Results live in `progress.weather_summary`, `progress.weather_error`, `progress.weather_meta`.
 
 ---
 
@@ -18,6 +19,7 @@ The backend has four layers:
 | `workflow.py` | Stage functions + `run_workflow`, intake parsing, clarify/retrieve/validate/generate |
 | `state.py` | `TripState`, `from_dict` / `to_dict`, merge rules (nested `state` payload, `accumulated_context`, interests) |
 | `rag.py` | Chroma + sentence-transformers, `embed_corpus`, `retrieve`, `format_retrieved_context` |
+| `weather_tool.py` | Open-Meteo forecast for trip dates; injected into itinerary prompts |
 | `itinerary.py` | `generate_itinerary`: JSON itinerary + Markdown; grounded-in-corpus citation rules |
 | `corpus/*.md` | Knowledge base (13 destination/topic guides) |
 | `.chromadb/` | Persisted vector index (created on first retrieval or via `embed_corpus`) |
@@ -98,9 +100,13 @@ Builds a query from destination, budget, interests, and request text, then runs 
 
 Light checks (dates, budget vs duration, expensive destinations). Issues go to **`progress.validation_issues`** and **`progress.is_valid`**.
 
-### 5) Generate
+### 5) Weather tool (before generate)
 
-When core fields are complete, **`itinerary.generate_itinerary`** produces Markdown + optional parsed JSON, grounded in retrieved chunks and citing corpus **filenames** as required by the prompt. If the LLM is unavailable or fails, see **`itinerary_llm_error`** and fallback behavior in code.
+When core fields are complete, **`weather_tool.apply_weather_to_progress`** geocodes **`trip_overview.destination`** and requests a **daily forecast** from Open-Meteo for the trip window. You need **`start_date`** plus **`end_date`** *or* **`start_date`** + **`duration_days`**. If dates are missing, a short skip message is stored in **`progress.weather_summary`**. Forecasts are limited to roughly the **next 16 days** from “today”; trips further out get a guidance message instead of live rows.
+
+### 6) Generate
+
+**`itinerary.generate_itinerary`** receives the weather block in the prompt (outdoor/indoor balance, packing). Output is Markdown + optional parsed JSON, grounded in retrieved chunks and citing corpus **filenames**. If the LLM fails, see **`itinerary_llm_error`** and fallback behavior in code.
 
 ---
 
