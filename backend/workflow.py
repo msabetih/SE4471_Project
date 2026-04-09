@@ -131,6 +131,28 @@ def _extract_destination(text: str) -> str | None:
     return None
 
 
+def _extract_destinations(text: str) -> list[str]:
+    lowered = text.lower()
+    matches: list[tuple[int, str]] = []
+
+    for raw in sorted(DESTINATION_CANONICAL, key=len, reverse=True):
+        for match in re.finditer(rf"\b{re.escape(raw)}\b", lowered):
+            matches.append((match.start(), DESTINATION_CANONICAL[raw]))
+
+    if not matches:
+        single = _extract_destination(text)
+        return [single] if single else []
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for _, canonical in sorted(matches, key=lambda item: item[0]):
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        ordered.append(canonical)
+    return ordered
+
+
 def _extract_duration_days(text: str) -> int | None:
     match = re.search(r"\b(\d+)\s*(day|days|week|weeks|month|months)\b", text, re.IGNORECASE)
     if not match:
@@ -145,6 +167,74 @@ def _extract_duration_days(text: str) -> int | None:
     if unit.startswith("month"):
         return value * 30
     return None
+
+
+def _mentions_total_trip_duration(text: str) -> bool:
+    return bool(
+        re.search(
+            r"(?:whole trip|entire trip|total trip|trip duration|overall trip|for the trip)\D{0,15}\d+\s*(?:day|days|week|weeks|month|months)\b",
+            text,
+            re.IGNORECASE,
+        )
+        or re.search(
+            r"\btrip\D{0,12}(?:is|to|at|for)\D{0,10}\d+\s*(?:day|days|week|weeks|month|months)\b",
+            text,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _looks_like_destination_split_only(text: str, destinations: list[str]) -> bool:
+    if not text or len(destinations) < 2:
+        return False
+
+    lowered = text.lower()
+    if _mentions_total_trip_duration(text):
+        return False
+    if any(token in lowered for token in ("total trip", "trip duration", "overall trip", "entire trip")):
+        return False
+
+    mentioned = 0
+    for destination in destinations:
+        escaped = re.escape(destination.lower())
+        if re.search(rf"\b{escaped}\b", lowered):
+            mentioned += 1
+
+    if mentioned < 2:
+        return False
+
+    duration_mentions = re.findall(r"\b\d+\s*(?:day|days|week|weeks|month|months)\b", lowered)
+    return len(duration_mentions) >= 2
+
+
+def _duration_to_days(value: int, unit: str) -> int:
+    unit = unit.lower()
+    if unit.startswith("week"):
+        return value * 7
+    if unit.startswith("month"):
+        return value * 30
+    return value
+
+
+def _extract_destination_day_allocations(text: str, destinations: list[str]) -> dict[str, int]:
+    if not text or not destinations:
+        return {}
+
+    allocations: dict[str, int] = {}
+    for destination in destinations:
+        escaped = re.escape(destination)
+        patterns = [
+            rf"(?:stay in|time in|visit|in)\s+\b{escaped}\b\s+(?:for|at|around)\s+(\d+)\s*(day|days|week|weeks|month|months)\b",
+            rf"\b{escaped}\b\s+(?:for|at|around)\s+(\d+)\s*(day|days|week|weeks|month|months)\b",
+            rf"(\d+)\s*(day|days|week|weeks|month|months)\s+(?:in\s+)?\b{escaped}\b",
+            rf"\b{escaped}\b\s+(\d+)\s*(day|days|week|weeks|month|months)\b",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                allocations[destination] = _duration_to_days(int(match.group(1)), match.group(2))
+                break
+    return allocations
 
 
 def _extract_budget_total(text: str) -> int | None:
@@ -263,21 +353,60 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
     latest_start_date, latest_end_date = _extract_dates(text)
     combined_start_date, combined_end_date = _extract_dates(combined)
 
+    latest_destinations = _extract_destinations(text)
+    combined_destinations = _extract_destinations(combined)
+    destinations = _coalesce_preferred(
+        latest_destinations,
+        trip_state.trip_overview.get("destinations"),
+        combined_destinations,
+    )
+    if destinations is not None:
+        trip_state.trip_overview["destinations"] = list(destinations)
+        existing_allocations = dict(trip_state.trip_overview.get("destination_day_allocations") or {})
+        trip_state.trip_overview["destination_day_allocations"] = {
+            key: val for key, val in existing_allocations.items() if key in trip_state.trip_overview["destinations"]
+        }
     destination = _coalesce_preferred(
+        (trip_state.trip_overview.get("destinations") or [None])[0],
         _extract_destination(text),
         trip_state.trip_overview.get("destination"),
         _extract_destination(combined),
     )
     if destination:
         trip_state.trip_overview["destination"] = destination
+    elif trip_state.trip_overview.get("destinations"):
+        trip_state.trip_overview["destination"] = trip_state.trip_overview["destinations"][0]
+
+    current_destinations = trip_state.trip_overview.get("destinations") or []
+    latest_allocations = _extract_destination_day_allocations(text, current_destinations)
+    latest_duration_days = _extract_duration_days(text)
+    split_only_reply = bool(
+        latest_allocations
+        and len(current_destinations) > 1
+        and (
+            not _mentions_total_trip_duration(text)
+            or _looks_like_destination_split_only(text, current_destinations)
+        )
+    )
+    if split_only_reply:
+        latest_duration_days = None
+
+    combined_duration_days = None if split_only_reply else _extract_duration_days(combined)
 
     duration_days = _coalesce_preferred(
-        _extract_duration_days(text),
+        latest_duration_days,
         trip_state.trip_overview.get("duration_days"),
-        _extract_duration_days(combined),
+        combined_duration_days,
     )
+    if duration_days is None and latest_allocations:
+        duration_days = sum(int(days) for days in latest_allocations.values())
     if duration_days is not None:
         trip_state.trip_overview["duration_days"] = duration_days
+
+    if latest_allocations:
+        merged_allocations = dict(trip_state.trip_overview.get("destination_day_allocations") or {})
+        merged_allocations.update(latest_allocations)
+        trip_state.trip_overview["destination_day_allocations"] = merged_allocations
 
     start_month = _coalesce_preferred(
         _extract_month(text),
@@ -353,10 +482,20 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
 
 def _local_clarifying_questions(state: TripState) -> list[str]:
     questions: list[str] = []
-    if not state.trip_overview.get("destination"):
-        questions.append("Which country or city do you want to visit?")
+    if not (state.trip_overview.get("destination") or state.trip_overview.get("destinations")):
+        questions.append("Which country or city do you want to visit? You can include multiple destinations.")
     if not state.trip_overview.get("duration_days"):
         questions.append("How many days is your trip?")
+    destinations = state.trip_overview.get("destinations") or []
+    allocations = state.trip_overview.get("destination_day_allocations") or {}
+    if len(destinations) > 1 and any(dest not in allocations for dest in destinations):
+        total = state.trip_overview.get("duration_days")
+        if total:
+            questions.append(
+                f"How would you like to split your {total}-day trip across {', '.join(destinations)}?"
+            )
+        else:
+            questions.append(f"How many days do you want to spend in each destination: {', '.join(destinations)}?")
     if not state.constraints.get("budget_total_usd"):
         questions.append("What is your total budget in USD?")
     if not state.trip_overview.get("interests"):
@@ -375,10 +514,14 @@ def _openai_clarifying_questions(state: TripState, model: str) -> list[str]:
         return []
 
     missing_fields = []
-    if not state.trip_overview.get("destination"):
+    if not (state.trip_overview.get("destination") or state.trip_overview.get("destinations")):
         missing_fields.append("destination")
     if not state.trip_overview.get("duration_days"):
         missing_fields.append("duration")
+    destinations = state.trip_overview.get("destinations") or []
+    allocations = state.trip_overview.get("destination_day_allocations") or {}
+    if len(destinations) > 1 and any(dest not in allocations for dest in destinations):
+        missing_fields.append("days per destination")
     if not state.constraints.get("budget_total_usd"):
         missing_fields.append("budget")
     if not state.trip_overview.get("interests"):
@@ -440,7 +583,8 @@ def retrieve(state: TripState | dict[str, Any], top_k: int = 3) -> TripState:
     trip_state.set_stage("retrieve")
 
     query_parts = [
-        trip_state.trip_overview.get("destination"),
+        " ".join(trip_state.trip_overview.get("destinations") or [])
+        or trip_state.trip_overview.get("destination"),
         "budget travel" if trip_state.constraints.get("budget_total_usd") else None,
         " ".join(trip_state.trip_overview.get("interests", []))
         if trip_state.trip_overview.get("interests")
@@ -470,8 +614,11 @@ def validate(state: TripState | dict[str, Any]) -> TripState:
 
     issues: list[str] = []
 
-    destination = (trip_state.trip_overview.get("destination") or "").lower()
+    destinations = trip_state.trip_overview.get("destinations") or []
+    destination_text = " ".join(destinations) or (trip_state.trip_overview.get("destination") or "")
+    destination = destination_text.lower()
     duration_days = trip_state.trip_overview.get("duration_days")
+    allocations = trip_state.trip_overview.get("destination_day_allocations") or {}
     budget_total = trip_state.constraints.get("budget_total_usd")
     budget_per_day = trip_state.constraints.get("budget_per_day_usd")
     start_date = trip_state.trip_overview.get("start_date")
@@ -494,8 +641,25 @@ def validate(state: TripState | dict[str, Any]) -> TripState:
     if duration_days and budget_total and budget_total < max(200, duration_days * 20):
         issues.append("Total budget is likely too low for the requested trip length.")
 
+    if len(destinations) > 1:
+        missing_allocation_dests = [dest for dest in destinations if dest not in allocations]
+        if missing_allocation_dests:
+            issues.append(
+                f"Please specify how many days to spend in each destination: {', '.join(missing_allocation_dests)}."
+            )
+        elif duration_days:
+            allocated_total = sum(int(v) for v in allocations.values())
+            if allocated_total != int(duration_days):
+                issues.append(
+                    f"Destination day split totals {allocated_total} days, but the trip length is {duration_days} days."
+                )
+
     if any(tag in destination for tag in EXPENSIVE_DESTINATIONS) and budget_per_day is not None and budget_per_day < 60:
-        issues.append(f"{trip_state.trip_overview.get('destination')} usually needs a higher daily budget.")
+        expensive_hits = [d for d in destinations if d.lower() in EXPENSIVE_DESTINATIONS]
+        if expensive_hits:
+            issues.append(f"{', '.join(expensive_hits)} usually need a higher daily budget.")
+        else:
+            issues.append(f"{trip_state.trip_overview.get('destination')} usually needs a higher daily budget.")
 
     trip_state.progress["validation_issues"] = issues
     trip_state.progress["is_valid"] = len(issues) == 0
@@ -503,8 +667,10 @@ def validate(state: TripState | dict[str, Any]) -> TripState:
 
 
 def _local_generate(state: TripState) -> str:
-    destination = state.trip_overview.get("destination") or "your selected destination"
+    destinations = state.trip_overview.get("destinations") or []
+    destination = ", ".join(destinations) or state.trip_overview.get("destination") or "your selected destination"
     duration = state.trip_overview.get("duration_days")
+    allocations = state.trip_overview.get("destination_day_allocations") or {}
     budget_total = state.constraints.get("budget_total_usd")
     interests = ", ".join(state.trip_overview.get("interests", [])) or "general sightseeing"
     context = format_retrieved_context(state.progress.get("retrieved_chunks", []))
@@ -517,6 +683,9 @@ def _local_generate(state: TripState) -> str:
     ]
     if duration:
         lines.append(f"- Suggested trip length: {duration} days.")
+    if allocations:
+        split = ", ".join(f"{dest}: {days} days" for dest, days in allocations.items())
+        lines.append(f"- Destination split: {split}.")
     if budget_total:
         lines.append(f"- Budget target: about ${budget_total} total.")
     if issues:
@@ -556,11 +725,18 @@ def generate(state: TripState | dict[str, Any], model: str = DEFAULT_OPENAI_MODE
 
 def _core_trip_fields_complete(state: TripState) -> bool:
     """Minimum fields needed before generating an itinerary (matches clarify missing-field logic)."""
-    if not state.trip_overview.get("destination"):
+    if not (state.trip_overview.get("destination") or state.trip_overview.get("destinations")):
         return False
     duration = state.trip_overview.get("duration_days")
     if duration is None or (isinstance(duration, int) and duration < 1):
         return False
+    destinations = state.trip_overview.get("destinations") or []
+    allocations = state.trip_overview.get("destination_day_allocations") or {}
+    if len(destinations) > 1:
+        if any(dest not in allocations for dest in destinations):
+            return False
+        if sum(int(v) for v in allocations.values()) != int(duration):
+            return False
     if not state.constraints.get("budget_total_usd"):
         return False
     if not state.trip_overview.get("interests"):
@@ -582,7 +758,7 @@ def _clarification_hold_message(state: TripState) -> str:
             lines.append(f"{i}. {q}")
     else:
         lines.append(
-            "Please add: destination, trip length (days), total budget (USD), and interests "
+            "Please add: destination, trip length (days), total budget (USD), interests, and if you have multiple destinations, how many days in each "
             "(e.g. food, temples, beaches)."
         )
     lines.extend(

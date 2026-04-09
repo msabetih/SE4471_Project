@@ -6,6 +6,7 @@ const API_BASE = "http://127.0.0.1:8001";
 
 const initialForm = {
   destination: "",
+  destinationSplit: "",
   duration: "",
   budget: "",
   groupSize: "",
@@ -44,9 +45,65 @@ function App() {
       .find((msg) => msg.role === "assistant" && msg.content?.trim());
   }, [messages]);
 
+  const activeDestinations = useMemo(() => {
+    const destinations = tripState?.trip_overview?.destinations;
+    if (Array.isArray(destinations) && destinations.length > 0) {
+      return destinations;
+    }
+    return form.destination
+      .split(/,| and /i)
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }, [form.destination, tripState]);
+
+  const activeSplit = useMemo(() => {
+    const allocations = tripState?.trip_overview?.destination_day_allocations;
+    if (allocations && typeof allocations === "object") {
+      return Object.entries(allocations)
+        .map(([destination, days]) => `${destination}: ${days} days`)
+        .join(" | ");
+    }
+    return "";
+  }, [tripState]);
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const normalizeDestinationSplit = (rawValue) => {
+    const parts = rawValue
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    const normalized = parts
+      .map((part) => {
+        let match = part.match(
+          /^(.+?)\s+(\d+)\s*(day|days|week|weeks|month|months)$/i
+        );
+        if (match) {
+          const [, destination, amount, unit] = match;
+          return `${destination.trim()} for ${amount} ${unit}`;
+        }
+
+        match = part.match(
+          /^(\d+)\s*(day|days|week|weeks|month|months)\s+(.+)$/i
+        );
+        if (match) {
+          const [, amount, unit, destination] = match;
+          return `${destination.trim()} for ${amount} ${unit}`;
+        }
+
+        return part;
+      })
+      .filter(Boolean);
+
+    if (normalized.length === 0) {
+      return "";
+    }
+
+    return `I want to stay in ${normalized.join(" and ")}.`;
   };
 
   const buildFormMessage = () => {
@@ -57,6 +114,9 @@ function App() {
     }
     if (form.duration.trim()) {
       lines.push(`The trip duration is ${form.duration.trim()} days.`);
+    }
+    if (form.destinationSplit.trim()) {
+      lines.push(normalizeDestinationSplit(form.destinationSplit.trim()));
     }
     if (form.startDate && form.endDate) {
       lines.push(`My travel dates are ${form.startDate} to ${form.endDate}.`);
@@ -344,13 +404,31 @@ function App() {
 
             <form className="trip-form" onSubmit={handleFormSubmit}>
               <label>
-                <span>Destination</span>
+                <span>Destination(s)</span>
                 <input
                   name="destination"
                   value={form.destination}
                   onChange={handleFormChange}
-                  placeholder="Japan"
+                  placeholder="Japan, Canada"
                 />
+                <small className="field-hint">
+                  Enter one place or multiple places separated by commas or
+                  “and”.
+                </small>
+              </label>
+
+              <label>
+                <span>Days per destination</span>
+                <input
+                  name="destinationSplit"
+                  value={form.destinationSplit}
+                  onChange={handleFormChange}
+                  placeholder="Japan 5 days, Canada 5 days"
+                />
+                <small className="field-hint">
+                  Optional for multi-stop trips. Example: `Japan 5 days,
+                  Canada 5 days`.
+                </small>
               </label>
 
               <div className="two-col">
@@ -450,6 +528,28 @@ function App() {
                 </button>
               </div>
             </form>
+
+            {(activeDestinations.length > 1 || activeSplit) && (
+              <div className="trip-summary-box">
+                <h3>Multi-stop trip</h3>
+                {activeDestinations.length > 1 && (
+                  <p>
+                    <strong>Stops:</strong> {activeDestinations.join(" → ")}
+                  </p>
+                )}
+                {activeSplit && (
+                  <p>
+                    <strong>Current split:</strong> {activeSplit}
+                  </p>
+                )}
+                {!activeSplit && activeDestinations.length > 1 && (
+                  <p className="summary-note">
+                    Add a day split here or answer the follow-up in chat so the
+                    itinerary can divide time across each destination.
+                  </p>
+                )}
+              </div>
+            )}
 
             {lastMeta.retrievedChunks.length > 0 && (
               <div className="sources-box">

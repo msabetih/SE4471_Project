@@ -226,6 +226,12 @@ input[type="date"] {
   font-weight: 600;
 }
 
+.field-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -273,6 +279,33 @@ input[type="date"] {
   margin-top: 22px;
   padding-top: 18px;
   border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.trip-summary-box {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(124, 156, 255, 0.08);
+  border: 1px solid rgba(124, 156, 255, 0.16);
+}
+
+.trip-summary-box h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.trip-summary-box p {
+  margin: 0 0 8px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.trip-summary-box p:last-child {
+  margin-bottom: 0;
+}
+
+.summary-note {
+  color: var(--muted);
 }
 
 .sources-box h3 {

@@ -37,6 +37,8 @@ def _default_trip_overview() -> dict[str, Any]:
     return {
         "request_text": "",
         "destination": None,
+        "destinations": [],
+        "destination_day_allocations": {},
         "duration_days": None,
         "start_date": None,  # YYYY-MM-DD
         "end_date": None,  # YYYY-MM-DD
