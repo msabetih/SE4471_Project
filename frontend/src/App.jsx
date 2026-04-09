@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { jsPDF } from "jspdf";
 
@@ -6,6 +6,7 @@ const API_BASE = "http://127.0.0.1:8001";
 
 const initialForm = {
   destination: "",
+  cityStops: "",
   destinationSplit: "",
   duration: "",
   budget: "",
@@ -14,6 +15,137 @@ const initialForm = {
   interests: "",
   startDate: "",
 };
+
+const LEAFLET_JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+
+function ensureLeafletAssets() {
+  if (!document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = LEAFLET_CSS_URL;
+    document.head.appendChild(link);
+  }
+
+  return new Promise((resolve, reject) => {
+    if (window.L) {
+      resolve(window.L);
+      return;
+    }
+
+    const existing = document.querySelector(`script[src="${LEAFLET_JS_URL}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve(window.L), {
+        once: true,
+      });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = LEAFLET_JS_URL;
+    script.async = true;
+    script.onload = () => resolve(window.L);
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+}
+
+function CityStopsMap({ markers, error, large = false, onExpand }) {
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRefs = useRef([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!mapContainerRef.current || !markers?.length) {
+      return undefined;
+    }
+
+    ensureLeafletAssets()
+      .then((L) => {
+        if (cancelled || !mapContainerRef.current || !L) {
+          return;
+        }
+
+        if (!mapRef.current) {
+          mapRef.current = L.map(mapContainerRef.current, {
+            zoomControl: true,
+          }).setView([markers[0].lat, markers[0].lng], 3);
+
+          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
+            maxZoom: 19,
+          }).addTo(mapRef.current);
+        }
+
+        markerRefs.current.forEach((marker) => marker.remove());
+        markerRefs.current = [];
+
+        const bounds = [];
+        markers.forEach((markerData) => {
+          const marker = L.marker([markerData.lat, markerData.lng])
+            .bindPopup(markerData.label)
+            .addTo(mapRef.current);
+          markerRefs.current.push(marker);
+          bounds.push([markerData.lat, markerData.lng]);
+        });
+
+        if (bounds.length > 0) {
+          mapRef.current.fitBounds(bounds, { padding: [24, 24], maxZoom: 8 });
+        }
+      })
+      .catch(() => {
+        // The fallback text below is enough if the map library cannot load.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [markers]);
+
+  useEffect(() => {
+    return () => {
+      markerRefs.current.forEach((marker) => marker.remove());
+      markerRefs.current = [];
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  if (!markers?.length) {
+    return null;
+  }
+
+  return (
+    <div className={`map-box ${large ? "map-box-large" : ""}`}>
+      <div className="map-box-header">
+        <h3>City Stops Map</h3>
+        {!large && onExpand ? (
+          <button
+            type="button"
+            className="secondary-btn map-expand-btn"
+            onClick={onExpand}
+          >
+            Expand
+          </button>
+        ) : null}
+      </div>
+      {error ? <p className="route-error">{error}</p> : null}
+      <button
+        type="button"
+        className={`map-canvas-button ${large ? "is-large" : ""}`}
+        onClick={large ? undefined : onExpand}
+      >
+        <div ref={mapContainerRef} className={`map-canvas ${large ? "is-large" : ""}`} />
+      </button>
+      <p className="map-caption">{markers.map((marker) => marker.label).join(" → ")}</p>
+    </div>
+  );
+}
 
 function App() {
   const [messages, setMessages] = useState([
@@ -27,11 +159,16 @@ function App() {
   const [tripState, setTripState] = useState({});
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [mapExpanded, setMapExpanded] = useState(false);
   const [lastMeta, setLastMeta] = useState({
     workflowStage: "",
     awaitingClarification: false,
     validationIssues: [],
     retrievedChunks: [],
+    routeChecks: [],
+    routeError: "",
+    cityMarkers: [],
+    cityMarkerError: "",
   });
 
   const canSubmitForm = useMemo(() => {
@@ -64,6 +201,17 @@ function App() {
     }
     return "";
   }, [tripState]);
+
+  const activeCities = useMemo(() => {
+    const cities = tripState?.trip_overview?.cities;
+    if (Array.isArray(cities) && cities.length > 0) {
+      return cities;
+    }
+    return form.cityStops
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }, [form.cityStops, tripState]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -110,6 +258,9 @@ function App() {
 
     if (form.destination.trim()) {
       lines.push(`I want to visit ${form.destination.trim()}.`);
+    }
+    if (form.cityStops.trim()) {
+      lines.push(`The city stops I want to visit are ${form.cityStops.trim()}.`);
     }
     if (form.duration.trim()) {
       lines.push(`The trip duration is ${form.duration.trim()} days.`);
@@ -192,6 +343,10 @@ function App() {
         awaitingClarification: Boolean(data.awaiting_clarification),
         validationIssues: data.validation_issues || [],
         retrievedChunks: data.retrieved_chunks || [],
+        routeChecks: data.route_checks || [],
+        routeError: data.route_error || "",
+        cityMarkers: data.city_markers || [],
+        cityMarkerError: data.city_marker_error || "",
       });
 
       setMessages((prev) => [
@@ -238,6 +393,10 @@ function App() {
       awaitingClarification: false,
       validationIssues: [],
       retrievedChunks: [],
+      routeChecks: [],
+      routeError: "",
+      cityMarkers: [],
+      cityMarkerError: "",
     });
     setMessages([
       {
@@ -413,6 +572,20 @@ function App() {
               </label>
 
               <label>
+                <span>City stops</span>
+                <input
+                  name="cityStops"
+                  value={form.cityStops}
+                  onChange={handleFormChange}
+                  placeholder="Tokyo, Kyoto, Toronto, Montreal"
+                />
+                <small className="field-hint">
+                  Optional. Add city stops to improve route checks and make the
+                  itinerary more specific.
+                </small>
+              </label>
+
+              <label>
                 <span>Days per destination</span>
                 <input
                   name="destinationSplit"
@@ -531,6 +704,46 @@ function App() {
                     itinerary can divide time across each destination.
                   </p>
                 )}
+                {activeCities.length > 0 && (
+                  <p>
+                    <strong>City stops:</strong> {activeCities.join(" → ")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <CityStopsMap
+              markers={lastMeta.cityMarkers}
+              error={lastMeta.cityMarkerError}
+              onExpand={() => setMapExpanded(true)}
+            />
+
+            {(lastMeta.routeChecks.length > 0 || lastMeta.routeError) && (
+              <div className="routes-box">
+                <h3>Route Checks</h3>
+                {lastMeta.routeError && (
+                  <p className="route-error">{lastMeta.routeError}</p>
+                )}
+                {lastMeta.routeChecks.length > 0 && (
+                  <ul>
+                    {lastMeta.routeChecks.map((route, index) => (
+                      <li key={`${route.origin}-${route.destination}-${index}`}>
+                        <strong>
+                          {route.origin} → {route.destination}
+                        </strong>
+                        <div className="source-meta">
+                          {route.skipped
+                            ? "Needs flight or separate long-distance transfer"
+                            : route.ok
+                            ? `${route.duration_text} · ${route.distance_text} · ${String(
+                                route.travel_mode || "DRIVE"
+                              ).toLowerCase()}`
+                            : route.error || "Route unavailable"}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 
@@ -549,6 +762,7 @@ function App() {
                 </ul>
               </div>
             )}
+
           </aside>
 
           <section className="panel chat-panel">
@@ -617,6 +831,30 @@ function App() {
           </section>
         </section>
       </main>
+      {mapExpanded && lastMeta.cityMarkers.length > 0 && (
+        <div className="map-modal" onClick={() => setMapExpanded(false)}>
+          <div
+            className="map-modal-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="map-modal-header">
+              <h2>City Stops Map</h2>
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setMapExpanded(false)}
+              >
+                Close
+              </button>
+            </div>
+            <CityStopsMap
+              markers={lastMeta.cityMarkers}
+              error={lastMeta.cityMarkerError}
+              large
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

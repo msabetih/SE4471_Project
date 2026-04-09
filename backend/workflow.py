@@ -21,9 +21,11 @@ DEFAULT_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 try:
     from .rag import format_retrieved_context, retrieve as rag_retrieve
+    from .routing import compute_adjacent_routes, geocode_places, route_api_available
     from .state import TripState, ensure_trip_state
 except ImportError:
     from rag import format_retrieved_context, retrieve as rag_retrieve
+    from routing import compute_adjacent_routes, geocode_places, route_api_available
     from state import TripState, ensure_trip_state
 
 MONTH_NAMES = {
@@ -88,6 +90,103 @@ DESTINATION_CANONICAL = {
     "rome": "Rome",
 }
 
+CITY_CANONICAL = {
+    "tokyo": "Tokyo",
+    "kyoto": "Kyoto",
+    "osaka": "Osaka",
+    "toronto": "Toronto",
+    "vancouver": "Vancouver",
+    "montreal": "Montreal",
+    "quebec city": "Quebec City",
+    "banff": "Banff",
+    "calgary": "Calgary",
+    "new york city": "New York City",
+    "new york": "New York City",
+    "los angeles": "Los Angeles",
+    "san francisco": "San Francisco",
+    "washington d.c.": "Washington D.C.",
+    "washington dc": "Washington D.C.",
+    "new orleans": "New Orleans",
+    "paris": "Paris",
+    "nice": "Nice",
+    "athens": "Athens",
+    "santorini": "Santorini",
+    "mykonos": "Mykonos",
+    "rome": "Rome",
+    "florence": "Florence",
+    "venice": "Venice",
+    "barcelona": "Barcelona",
+    "madrid": "Madrid",
+    "seville": "Seville",
+    "bangkok": "Bangkok",
+    "chiang mai": "Chiang Mai",
+    "phuket": "Phuket",
+    "cairns": "Cairns",
+    "sydney": "Sydney",
+    "melbourne": "Melbourne",
+    "cusco": "Cusco",
+    "lima": "Lima",
+    "mexico city": "Mexico City",
+    "cancun": "Cancun",
+    "tulum": "Tulum",
+}
+
+CITY_TO_DESTINATION = {
+    "Tokyo": "Japan",
+    "Kyoto": "Japan",
+    "Osaka": "Japan",
+    "Toronto": "Canada",
+    "Vancouver": "Canada",
+    "Montreal": "Canada",
+    "Quebec City": "Canada",
+    "Banff": "Canada",
+    "Calgary": "Canada",
+    "New York City": "USA",
+    "Los Angeles": "USA",
+    "San Francisco": "USA",
+    "Washington D.C.": "USA",
+    "New Orleans": "USA",
+    "Paris": "France",
+    "Nice": "France",
+    "Athens": "Greece",
+    "Santorini": "Greece",
+    "Mykonos": "Greece",
+    "Rome": "Italy",
+    "Florence": "Italy",
+    "Venice": "Italy",
+    "Barcelona": "Spain",
+    "Madrid": "Spain",
+    "Seville": "Spain",
+    "Bangkok": "Thailand",
+    "Chiang Mai": "Thailand",
+    "Phuket": "Thailand",
+    "Cairns": "Australia",
+    "Sydney": "Australia",
+    "Melbourne": "Australia",
+    "Cusco": "Peru",
+    "Lima": "Peru",
+    "Mexico City": "Mexico",
+    "Cancun": "Mexico",
+    "Tulum": "Mexico",
+}
+
+PRIMARY_DESTINATION_CANONICAL = {
+    "australia": "Australia",
+    "canada": "Canada",
+    "france": "France",
+    "greece": "Greece",
+    "italy": "Italy",
+    "japan": "Japan",
+    "mexico": "Mexico",
+    "peru": "Peru",
+    "spain": "Spain",
+    "thailand": "Thailand",
+    "usa": "USA",
+    "united states": "United States",
+    "europe": "Europe",
+    "asia": "Asia",
+}
+
 
 def _normalized(text: str) -> str:
     return " ".join(text.strip().split())
@@ -135,13 +234,31 @@ def _extract_destinations(text: str) -> list[str]:
     lowered = text.lower()
     matches: list[tuple[int, str]] = []
 
-    for raw in sorted(DESTINATION_CANONICAL, key=len, reverse=True):
+    for raw in sorted(PRIMARY_DESTINATION_CANONICAL, key=len, reverse=True):
         for match in re.finditer(rf"\b{re.escape(raw)}\b", lowered):
-            matches.append((match.start(), DESTINATION_CANONICAL[raw]))
+            matches.append((match.start(), PRIMARY_DESTINATION_CANONICAL[raw]))
 
     if not matches:
         single = _extract_destination(text)
         return [single] if single else []
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for _, canonical in sorted(matches, key=lambda item: item[0]):
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        ordered.append(canonical)
+    return ordered
+
+
+def _extract_cities(text: str) -> list[str]:
+    lowered = text.lower()
+    matches: list[tuple[int, str]] = []
+
+    for raw in sorted(CITY_CANONICAL, key=len, reverse=True):
+        for match in re.finditer(rf"\b{re.escape(raw)}\b", lowered):
+            matches.append((match.start(), CITY_CANONICAL[raw]))
 
     seen: set[str] = set()
     ordered: list[str] = []
@@ -393,6 +510,16 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
     elif trip_state.trip_overview.get("destinations"):
         trip_state.trip_overview["destination"] = trip_state.trip_overview["destinations"][0]
 
+    latest_cities = _extract_cities(text)
+    combined_cities = _extract_cities(combined)
+    cities = _coalesce_preferred(
+        latest_cities,
+        trip_state.trip_overview.get("cities"),
+        combined_cities,
+    )
+    if cities is not None:
+        trip_state.trip_overview["cities"] = list(cities)
+
     current_destinations = trip_state.trip_overview.get("destinations") or []
     latest_allocations = _extract_destination_day_allocations(text, current_destinations)
     latest_duration_days = _extract_duration_days(text)
@@ -518,6 +645,7 @@ def _local_clarifying_questions(state: TripState) -> list[str]:
     if not state.trip_overview.get("duration_days"):
         questions.append("How many days is your trip?")
     destinations = state.trip_overview.get("destinations") or []
+    cities = state.trip_overview.get("cities") or []
     allocations = state.trip_overview.get("destination_day_allocations") or {}
     if len(destinations) > 1 and any(dest not in allocations for dest in destinations):
         total = state.trip_overview.get("duration_days")
@@ -527,8 +655,10 @@ def _local_clarifying_questions(state: TripState) -> list[str]:
             )
         else:
             questions.append(f"How many days do you want to spend in each destination: {', '.join(destinations)}?")
+    elif len(destinations) > 1 and len(cities) < 2:
+        questions.append("Which specific cities do you want to visit in each destination?")
     if not _get_budget_total(state.constraints):
-        questions.append("What is your total budget in CAD?")
+        questions.append("What is your total budget?")
     if not state.trip_overview.get("interests"):
         questions.append("What are your top interests (food, beaches, museums, nightlife, hiking)?")
     return questions[:3]
@@ -638,8 +768,58 @@ def retrieve(state: TripState | dict[str, Any], top_k: int = 3) -> TripState:
     return trip_state
 
 
+def enrich_tools(state: TripState | dict[str, Any]) -> TripState:
+    """Call external tools (currently routing/maps) and store results in progress."""
+    trip_state = ensure_trip_state(state)
+    trip_state.set_stage("enrich_tools")
+
+    cities = trip_state.trip_overview.get("cities") or []
+    route_checks: list[dict[str, Any]] = []
+    route_error = ""
+    city_markers: list[dict[str, Any]] = []
+    city_marker_error = ""
+
+    if cities and route_api_available():
+        city_markers, city_marker_error = geocode_places(cities)
+
+        adjacent_pairs = list(zip(cities, cities[1:]))
+        routable_pairs: list[tuple[str, str]] = []
+
+        for origin, destination in adjacent_pairs:
+            origin_parent = CITY_TO_DESTINATION.get(origin)
+            destination_parent = CITY_TO_DESTINATION.get(destination)
+            if origin_parent and destination_parent and origin_parent != destination_parent:
+                route_checks.append(
+                    {
+                        "ok": False,
+                        "origin": origin,
+                        "destination": destination,
+                        "travel_mode": "FLIGHT",
+                        "error": "Cross-country transfer likely requires a flight.",
+                        "skipped": True,
+                    }
+                )
+            else:
+                routable_pairs.append((origin, destination))
+
+        if routable_pairs:
+            routed: list[dict[str, Any]] = []
+            for origin, destination in routable_pairs:
+                routed.extend(compute_adjacent_routes([origin, destination]))
+            route_checks.extend(routed)
+            failed = [check for check in routed if not check.get("ok")]
+            if failed:
+                route_error = failed[0].get("error", "Route lookup failed")
+
+    trip_state.progress["route_checks"] = route_checks
+    trip_state.progress["route_error"] = route_error
+    trip_state.progress["city_markers"] = city_markers
+    trip_state.progress["city_marker_error"] = city_marker_error
+    return trip_state
+
+
 def validate(state: TripState | dict[str, Any]) -> TripState:
-    """Check high-level budget/timing conflicts."""
+    """Check high-level budget/timing conflicts using state plus any tool enrichments."""
     trip_state = ensure_trip_state(state)
     trip_state.set_stage("validate")
 
@@ -691,6 +871,30 @@ def validate(state: TripState | dict[str, Any]) -> TripState:
             issues.append(f"{', '.join(expensive_hits)} usually need a higher daily budget.")
         else:
             issues.append(f"{trip_state.trip_overview.get('destination')} usually needs a higher daily budget.")
+
+    route_checks = trip_state.progress.get("route_checks") or []
+    route_error = (trip_state.progress.get("route_error") or "").strip()
+    if route_error:
+        issues.append(
+            "One or more city-to-city transfers could not be routed automatically. "
+            "You may need a flight or a different city sequence."
+        )
+    else:
+        for check in route_checks:
+            if check.get("skipped"):
+                issues.append(
+                    f"Transfer from {check['origin']} to {check['destination']} will likely require a flight."
+                )
+                continue
+            duration_seconds = check.get("duration_seconds")
+            if duration_seconds is not None and duration_seconds > 8 * 3600:
+                origin = check["origin"]
+                dest_name = check["destination"]
+                duration_text = check.get("duration_text", "unknown")
+                distance_text = check.get("distance_text", "unknown")
+                issues.append(
+                    f"Transfer from {origin} to {dest_name} is long ({duration_text}, {distance_text}) and may require a flight or a dedicated travel day."
+                )
 
     trip_state.progress["validation_issues"] = issues
     trip_state.progress["is_valid"] = len(issues) == 0
@@ -808,10 +1012,12 @@ def run_workflow(
     top_k: int = 3,
     model: str = DEFAULT_OPENAI_MODEL,
 ) -> TripState:
-    """Run full workflow: intake -> clarify -> retrieve -> validate -> generate (if details complete)."""
+    """Run full workflow: intake -> clarify -> retrieve -> validate -> enrich_tools -> validate -> generate."""
     trip_state = intake(user_input, state=state)
     trip_state = clarify(trip_state, model=model)
     trip_state = retrieve(trip_state, top_k=top_k)
+    trip_state = validate(trip_state)
+    trip_state = enrich_tools(trip_state)
     trip_state = validate(trip_state)
 
     trip_state.progress["awaiting_clarification"] = False

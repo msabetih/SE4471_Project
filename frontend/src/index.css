@@ -289,6 +289,29 @@ input[type="date"].date-empty::-webkit-datetime-edit {
   border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
+.routes-box {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.map-box {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.map-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.map-expand-btn {
+  padding: 0.55rem 0.9rem;
+}
+
 .trip-summary-box {
   margin-top: 20px;
   padding: 16px 18px;
@@ -321,7 +344,22 @@ input[type="date"].date-empty::-webkit-datetime-edit {
   font-size: 1rem;
 }
 
+.routes-box h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.map-box h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
 .sources-box ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.routes-box ul {
   margin: 0;
   padding-left: 18px;
 }
@@ -330,9 +368,95 @@ input[type="date"].date-empty::-webkit-datetime-edit {
   margin-bottom: 10px;
 }
 
+.routes-box li {
+  margin-bottom: 10px;
+}
+
 .source-meta {
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+.route-error {
+  margin: 0 0 10px;
+  color: #ffd7a0;
+  line-height: 1.5;
+}
+
+.map-canvas {
+  width: 100%;
+  height: 240px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.map-canvas.is-large {
+  height: 520px;
+}
+
+.map-canvas-button {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+}
+
+.map-canvas-button:not(.is-large) {
+  cursor: zoom-in;
+}
+
+.map-canvas .leaflet-control-attribution {
+  font-size: 0.72rem;
+}
+
+.leaflet-default-icon-path {
+  background-image: url("https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png");
+}
+
+.map-caption {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.map-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 16, 32, 0.78);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.map-modal-card {
+  width: min(960px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.map-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.map-modal-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
 }
 
 .chat-panel {

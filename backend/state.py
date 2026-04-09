@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-WORKFLOW_STAGES = ("intake", "clarify", "retrieve", "validate", "generate")
+WORKFLOW_STAGES = ("intake", "clarify", "retrieve", "validate", "enrich_tools", "generate")
 
 
 def _normalize_client_state_payload(data: dict[str, Any] | None) -> dict[str, Any]:
@@ -38,6 +38,7 @@ def _default_trip_overview() -> dict[str, Any]:
         "request_text": "",
         "destination": None,
         "destinations": [],
+        "cities": [],
         "destination_day_allocations": {},
         "duration_days": None,
         "start_date": None,  # YYYY-MM-DD
@@ -64,6 +65,12 @@ def _default_progress() -> dict[str, Any]:
         "retrieval_query": "",
         "retrieved_chunks": [],
         "retrieval_error": "",
+        "route_checks": [],
+        "route_error": "",
+        "city_markers": [],
+        "city_marker_error": "",
+        "weather_checks": [],
+        "weather_error": "",
         "validation_issues": [],
         "is_valid": True,
         "final_recommendation": "",
