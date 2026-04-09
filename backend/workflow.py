@@ -222,6 +222,19 @@ def _extract_interests(text: str) -> list[str]:
     return sorted(set(hits))
 
 
+def _coalesce_preferred(*values):
+    """Return the first non-empty parsed value."""
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        if isinstance(value, (list, tuple, set)) and not value:
+            continue
+        return value
+    return None
+
+
 def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> TripState:
     """Parse free-form user input into state fields."""
     trip_state = ensure_trip_state(state)
@@ -237,22 +250,64 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
     #full conversation for API round-trips (not just this turn's line).
     trip_state.trip_overview["request_text"] = combined
 
-    start_date, end_date = _extract_dates(combined)
+    latest_start_date, latest_end_date = _extract_dates(text)
+    combined_start_date, combined_end_date = _extract_dates(combined)
 
-    trip_state.trip_overview["destination"] = _extract_destination(combined) or trip_state.trip_overview.get(
-        "destination"
+    destination = _coalesce_preferred(
+        _extract_destination(text),
+        trip_state.trip_overview.get("destination"),
+        _extract_destination(combined),
     )
-    trip_state.trip_overview["duration_days"] = _extract_duration_days(combined) or trip_state.trip_overview.get(
-        "duration_days"
-    )
-    trip_state.trip_overview["start_month"] = _extract_month(combined) or trip_state.trip_overview.get("start_month")
-    trip_state.trip_overview["start_date"] = start_date or trip_state.trip_overview.get("start_date")
-    trip_state.trip_overview["end_date"] = end_date or trip_state.trip_overview.get("end_date")
-    prev_interests = list(trip_state.trip_overview.get("interests") or [])
-    from_combined = _extract_interests(combined)
-    trip_state.trip_overview["interests"] = sorted(set(prev_interests + from_combined))
+    if destination:
+        trip_state.trip_overview["destination"] = destination
 
-    budget_total = _extract_budget_total(combined)
+    duration_days = _coalesce_preferred(
+        _extract_duration_days(text),
+        trip_state.trip_overview.get("duration_days"),
+        _extract_duration_days(combined),
+    )
+    if duration_days is not None:
+        trip_state.trip_overview["duration_days"] = duration_days
+
+    start_month = _coalesce_preferred(
+        _extract_month(text),
+        trip_state.trip_overview.get("start_month"),
+        _extract_month(combined),
+    )
+    if start_month:
+        trip_state.trip_overview["start_month"] = start_month
+
+    start_date = _coalesce_preferred(
+        latest_start_date,
+        trip_state.trip_overview.get("start_date"),
+        combined_start_date,
+    )
+    if start_date:
+        trip_state.trip_overview["start_date"] = start_date
+
+    end_date = _coalesce_preferred(
+        latest_end_date,
+        trip_state.trip_overview.get("end_date"),
+        combined_end_date,
+    )
+    if end_date:
+        trip_state.trip_overview["end_date"] = end_date
+
+    latest_interests = _extract_interests(text)
+    combined_interests = _extract_interests(combined)
+    interests = _coalesce_preferred(
+        latest_interests,
+        trip_state.trip_overview.get("interests"),
+        combined_interests,
+    )
+    if interests is not None:
+        trip_state.trip_overview["interests"] = list(interests)
+
+    budget_total = _coalesce_preferred(
+        _extract_budget_total(text),
+        trip_state.constraints.get("budget_total_usd"),
+        _extract_budget_total(combined),
+    )
     if budget_total:
         trip_state.constraints["budget_total_usd"] = budget_total
 
@@ -263,11 +318,17 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
             2,
         )
 
-    group_size = _extract_group_size(combined)
+    group_size = _coalesce_preferred(
+        _extract_group_size(text),
+        trip_state.user_profile.get("group_size"),
+        _extract_group_size(combined),
+    )
     if group_size:
         trip_state.user_profile["group_size"] = group_size
 
-    lowered = combined.lower()
+    lowered = text.lower()
+    if not any(token in lowered for token in ("family", "couple", "friends", "group", "solo", "alone", "by myself")):
+        lowered = combined.lower()
     if "family" in lowered:
         trip_state.user_profile["traveler_type"] = "family"
     elif "couple" in lowered:
@@ -374,7 +435,7 @@ def retrieve(state: TripState | dict[str, Any], top_k: int = 3) -> TripState:
         " ".join(trip_state.trip_overview.get("interests", []))
         if trip_state.trip_overview.get("interests")
         else None,
-        trip_state.trip_overview.get("request_text"),
+        trip_state.progress.get("raw_user_input") or trip_state.trip_overview.get("request_text"),
     ]
     query = " ".join(str(part).strip() for part in query_parts if part).strip()
     if not query:
