@@ -35,6 +35,13 @@ Greece's second city is underrated and beloved by Greeks. Excellent food scene (
 - Moderate: €90–140 — mid-range hotels, taverna meals, ferry tickets between islands
 - Luxury: €250+ — boutique caldera hotels in Santorini, sunset dining, private sailing charters
 
+## Recommended Restaurants (by city)
+- Varoulko Seaside — Athens (Piraeus)
+- Delta Restaurant — Athens
+- Botrini's — Athens
+- CTC Urban Gastronomy — Athens
+- Selene — Santorini (Pyrgos)
+
 ## Best Time to Visit
 - **May–June:** Ideal — warm and sunny, lower prices, fewer crowds. Wildflowers in bloom.
 - **September–October:** Second best — summer crowds gone, sea still warm for swimming.

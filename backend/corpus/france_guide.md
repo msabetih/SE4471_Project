@@ -30,6 +30,13 @@ Bordeaux is a UNESCO World Heritage city with beautiful 18th-century architectur
 - Moderate: €120–180 — 3-star hotels, bistro lunches (lunch menus/plats du jour are better value than dinner)
 - Luxury: €300+ — boutique hotels, Michelin-starred dining, private wine tours
 
+## Recommended Restaurants (by city)
+- Arpege — Paris
+- Septime — Paris
+- Mirazur — Menton
+- Le Petit Nice Passedat — Marseille
+- Maison Pic — Valence
+
 ## Best Time to Visit
 - **Spring (April–June):** Best weather, blooming gardens, fewer crowds than summer. Paris fashion weeks in March/October.
 - **Summer (July–August):** Peak season everywhere, especially the Riviera. Many Parisians leave the city in August, making it quieter.

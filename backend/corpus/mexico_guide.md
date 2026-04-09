@@ -36,6 +36,13 @@ Cancún is a resort strip with beautiful Caribbean water — ideal for sun-and-b
 - Moderate: $70–120 CAD — mid-range hotels, restaurant meals, guided tours
 - Luxury: $200+ CAD — boutique hotels, fine dining, cenote private access, helicopter tours
 
+## Recommended Restaurants (by city)
+- Pujol — Mexico City
+- Quintonil — Mexico City
+- Rosetta — Mexico City
+- Alcalde — Guadalajara
+- Le Chique — Puerto Morelos (Quintana Roo)
+
 ## Best Time to Visit
 - **November–April (dry season):** Best overall. Mild temperatures in highland cities, calm Caribbean seas.
 - **May–October (wet season):** Afternoon showers, lush green landscapes. Hurricane risk on Caribbean coast June–October (peak August–October).

@@ -27,6 +27,13 @@ The Peace Memorial Park and Museum offer a sobering and important historical exp
 - Moderate: ¥12,000–20,000 (~$80–135 CAD) — mid-range hotels, sit-down restaurants, paid attractions
 - Luxury: ¥40,000+ (~$270+ CAD) — ryokan (traditional inn), kaiseki dining, private tours
 
+## Recommended Restaurants (by city)
+- Narisawa — Tokyo
+- Den — Tokyo
+- Kikunoi Honten — Kyoto
+- Hajime — Osaka
+- La Cime — Osaka
+
 ## Best Time to Visit
 - **Spring (March–May):** Cherry blossom season (sakura), most popular period — book months in advance.
 - **Autumn (October–November):** Fall foliage (koyo), comfortable temperatures, fewer crowds than spring.

@@ -34,6 +34,13 @@ Iquitos is the world's largest city inaccessible by road — reached only by pla
 - Moderate: $80–130 CAD — mid-range hotels, restaurant meals, train tickets, guided tours
 - Luxury: $250+ CAD — luxury train (Belmond Hiram Bingham), Inkaterra or Belmond lodges, private guides
 
+## Recommended Restaurants (by city)
+- Central — Lima
+- Maido — Lima
+- Kjolle — Lima
+- Astrid y Gaston — Lima
+- Mil — Moray (Cusco region)
+
 ## Best Time to Visit
 - **May–September (dry season):** Best for Machu Picchu, trekking, and the Sacred Valley. Clear skies, but cold nights at altitude.
 - **October–April (wet season):** Lush green landscapes; Machu Picchu can have mist and rain. The Amazon is best November–April when water levels are high for wildlife spotting.

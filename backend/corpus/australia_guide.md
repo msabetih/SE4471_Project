@@ -31,6 +31,13 @@ Australia's island state (1-hour flight from Melbourne) is 40% national park. Th
 - Moderate: $180–280 AUD (~$117–182 CAD) — mid-range hotels, café breakfasts, pub dinners, day tours
 - Luxury: $400+ AUD (~$260+ CAD) — boutique hotels, fine dining, helicopter tours, liveaboard reef trips
 
+## Recommended Restaurants (by city)
+- Quay — Sydney
+- Bennelong — Sydney
+- Attica — Melbourne
+- Brae — Birregurra (Victoria)
+- Restaurant Botanic — Adelaide
+
 ## Best Time to Visit
 Australia is in the Southern Hemisphere, so seasons are reversed from North America and Europe.
 - **Sydney/Melbourne (Southeast):** September–November (spring) and March–May (autumn) are ideal. December–February (summer) is beach season but can be very hot.

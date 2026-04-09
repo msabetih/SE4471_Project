@@ -13,7 +13,6 @@ const initialForm = {
   dietaryRestrictions: "",
   interests: "",
   startDate: "",
-  endDate: "",
 };
 
 function App() {
@@ -118,12 +117,8 @@ function App() {
     if (form.destinationSplit.trim()) {
       lines.push(normalizeDestinationSplit(form.destinationSplit.trim()));
     }
-    if (form.startDate && form.endDate) {
-      lines.push(`My travel dates are ${form.startDate} to ${form.endDate}.`);
-    } else if (form.startDate) {
+    if (form.startDate) {
       lines.push(`My trip starts on ${form.startDate}.`);
-    } else if (form.endDate) {
-      lines.push(`My trip ends on ${form.endDate}.`);
     }
     if (form.budget.trim()) {
       lines.push(`My total budget is ${form.budget.trim()} CAD.`);
@@ -402,7 +397,7 @@ function App() {
               <p>Use the form for a fast first draft, then refine in chat.</p>
             </div>
 
-            <form className="trip-form" onSubmit={handleFormSubmit}>
+            <form className="trip-form" onSubmit={handleFormSubmit} autoComplete="off">
               <label>
                 <span>Destination(s)</span>
                 <input
@@ -469,24 +464,12 @@ function App() {
                   <input
                     type="date"
                     name="startDate"
-                    value={form.startDate}
+                    value={form.startDate || ""}
                     onChange={handleFormChange}
+                    autoComplete="off"
+                    className={!form.startDate ? "date-empty" : ""}
                   />
                 </label>
-              </div>
-
-              <div className="two-col">
-                <label>
-                  <span>End date</span>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={form.endDate}
-                    onChange={handleFormChange}
-                  />
-                </label>
-
-                <div />
               </div>
 
               <label>

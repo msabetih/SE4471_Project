@@ -31,6 +31,13 @@ Italy's largest island has its own distinct culture blending Greek, Arab, Norman
 - Moderate: €120–160 — 3-star hotels or B&Bs, trattoria meals, major museum admissions
 - Luxury: €250+ — boutique hotels, fine dining, private guided tours
 
+## Recommended Restaurants (by city)
+- Osteria Francescana — Modena
+- La Pergola — Rome
+- Piazza Duomo — Alba
+- Le Calandre — Rubano (Padua area)
+- Uliassi — Senigallia
+
 ## Best Time to Visit
 - **April–June:** Ideal — warm weather, spring flowers, manageable crowds.
 - **September–October:** Excellent — summer heat subsides, grape harvest season in Tuscany and Piedmont.

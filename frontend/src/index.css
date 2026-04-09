@@ -81,6 +81,14 @@ input[type="date"] {
   color-scheme: dark;
 }
 
+input[type="date"].date-empty {
+  color: #8291b5;
+}
+
+input[type="date"].date-empty::-webkit-datetime-edit {
+  color: #8291b5;
+}
+
 #root {
   width: 100%;
 }

@@ -31,6 +31,13 @@ A small city in the Basque Country with arguably the best food concentration per
 - Moderate: €100–160 — mid-range hotels, restaurant dinners, paid museum entries
 - Luxury: €250+ — boutique paradores (historic hotels), fine Basque cuisine, private flamenco shows
 
+## Recommended Restaurants (by city)
+- Disfrutar — Barcelona
+- DiverXO — Madrid
+- El Celler de Can Roca — Girona
+- Asador Etxebarri — Atxondo (Bizkaia)
+- Mugaritz — Errenteria (Gipuzkoa)
+
 ## Best Time to Visit
 - **Spring (March–June):** Best overall. Semana Santa (Holy Week) in Seville is extraordinary but extremely crowded.
 - **Autumn (September–October):** Excellent weather, grape harvest in Rioja and Penedès wine regions.

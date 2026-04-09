@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -440,11 +440,23 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
     if start_date:
         trip_state.trip_overview["start_date"] = start_date
 
-    end_date = _coalesce_preferred(
-        latest_end_date,
-        trip_state.trip_overview.get("end_date"),
-        combined_end_date,
-    )
+    # End date is derived when start date + duration are available.
+    end_date: str | None = None
+    if latest_end_date:
+        end_date = latest_end_date
+    elif start_date and trip_state.trip_overview.get("duration_days"):
+        try:
+            start_dt = date.fromisoformat(start_date)
+            trip_days = int(trip_state.trip_overview["duration_days"])
+            if trip_days >= 1:
+                end_date = (start_dt + timedelta(days=trip_days - 1)).isoformat()
+        except (ValueError, TypeError):
+            end_date = None
+    elif trip_state.trip_overview.get("end_date"):
+        end_date = trip_state.trip_overview.get("end_date")
+    elif combined_end_date:
+        end_date = combined_end_date
+
     if end_date:
         trip_state.trip_overview["end_date"] = end_date
 

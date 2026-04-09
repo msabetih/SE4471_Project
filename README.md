@@ -145,7 +145,7 @@ A React frontend was implemented to provide a user-friendly interface for intera
 - Trip parameters form including:
   - destination
   - duration
-  - start and end dates (date picker)
+  - start date (date picker; end date is auto-calculated from duration)
   - budget
   - group size
   - dietary restrictions

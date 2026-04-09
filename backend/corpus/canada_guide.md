@@ -31,6 +31,13 @@ The only walled city in North America outside of Mexico. Old Quebec (Vieux-Québ
 - Moderate: $180–280 CAD — mid-range hotels, sit-down restaurants, paid attractions
 - Luxury: $400+ CAD — mountain lodge hotels, fine dining, heli-skiing, guided wilderness tours
 
+## Recommended Restaurants (by city)
+- Alo — Toronto
+- Edulis — Toronto
+- Joe Beef — Montreal
+- Toque — Montreal
+- Published on Main — Vancouver
+
 ## Best Time to Visit
 - **Canadian Rockies:** June–September for hiking (snow-free trails). Moraine Lake access: early June–mid-October. Ski season: November–April.
 - **Vancouver/Victoria:** April–October (relatively dry). May–June: best balance of weather and crowds.

@@ -38,6 +38,13 @@ Thailand's former capital (1350–1767), just 1.5 hours from Bangkok by train. A
 - Moderate: 1,500–3,000 THB (~$43–85 CAD) — mid-range hotels, restaurant meals, island ferry tickets
 - Luxury: 5,000+ THB (~$140+ CAD) — beachfront resorts, private tours, spa treatments
 
+## Recommended Restaurants (by city)
+- Gaggan Anand — Bangkok
+- Le Du — Bangkok
+- Sorn — Bangkok
+- Nusara — Bangkok
+- PRU — Phuket
+
 ## Best Time to Visit
 - **November–April (cool/dry season):** Best overall. Gulf Coast islands (Koh Samui, Koh Phangan) are best November–March. Andaman Coast (Phuket, Krabi) best December–April.
 - **May–October (monsoon season):** Heavy rain, especially on Andaman Coast. Koh Samui has its own rain season October–December. Prices are lower and crowds thinner.

@@ -33,6 +33,13 @@ The capital's National Mall museums (Smithsonian Institution) are free and world
 - Moderate: $180–280 CAD — mid-range hotels, sit-down restaurants, paid attractions and tours
 - Luxury: $400+ CAD — boutique hotels, fine dining, private experiences
 
+## Recommended Restaurants (by city)
+- Le Bernardin — New York City
+- Atomix — New York City
+- Alinea — Chicago
+- The French Laundry — Yountville (California)
+- n/naka — Los Angeles
+
 ## Best Time to Visit
 - **Northeast (NYC, D.C.):** April–June (spring) and September–October (fall) — mild temperatures, fall foliage.
 - **California:** April–October for most areas. Yosemite best May–June (waterfalls). LA is year-round pleasant.

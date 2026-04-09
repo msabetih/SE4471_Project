@@ -84,7 +84,7 @@ uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 ### 1) Intake
 
-Parses the user message and merged state into `TripState`: destination, duration, budget, interests, traveler hints. Builds **`trip_overview.request_text`** and **`progress.accumulated_context`** as the **full conversation text** so later turns can re-parse budget and interests.
+Parses the user message and merged state into `TripState`: destination, duration, budget, interests, traveler hints. When `start_date` and `duration_days` are present, `end_date` is auto-calculated. Builds **`trip_overview.request_text`** and **`progress.accumulated_context`** as the **full conversation text** so later turns can re-parse budget and interests.
 
 ### 2) Clarify
 
