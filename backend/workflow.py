@@ -241,7 +241,7 @@ def _extract_budget_total(text: str) -> int | None:
     explicit_update_patterns = [
         r"(?:budget|total budget|new budget)\D{0,20}(?:is|to|at|of)\D{0,10}\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\b",
         r"(?:change|make|set|update|raise|lower)\D{0,20}(?:budget|it)\D{0,20}(?:to|at)\D{0,10}\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\b",
-        r"\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\s*USD?\s*(?:budget|total)?\b",
+        r"\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:CAD|C\$)\s*(?:budget|total)?\b",
     ]
     for pattern in explicit_update_patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -264,16 +264,16 @@ def _extract_budget_total(text: str) -> int | None:
     if standalone:
         return int(standalone.group(1))
 
-    usd = re.search(
-        r"\b(\d{1,3}(?:,\d{3})+|\d{2,6})\s*USD\b",
+    currency_amount = re.search(
+        r"\b(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:CAD|C\$)\b",
         text,
         re.IGNORECASE,
     )
-    if usd:
-        return int(usd.group(1).replace(",", ""))
+    if currency_amount:
+        return int(currency_amount.group(1).replace(",", ""))
 
     trip_budget = re.search(
-        r"(?:trip|total|budget)\D{0,12}(\d{1,3}(?:,\d{3})+|\d{2,6})\s*USD\b",
+        r"(?:trip|total|budget)\D{0,12}(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:CAD|C\$)\b",
         text,
         re.IGNORECASE,
     )
@@ -333,6 +333,22 @@ def _coalesce_preferred(*values):
             continue
         return value
     return None
+
+
+def _get_budget_total(constraints: dict[str, Any]) -> int | float | None:
+    return constraints.get("budget_total_cad")
+
+
+def _get_budget_per_day(constraints: dict[str, Any]) -> int | float | None:
+    return constraints.get("budget_per_day_cad")
+
+
+def _set_budget_total(constraints: dict[str, Any], value: int | float) -> None:
+    constraints["budget_total_cad"] = value
+
+
+def _set_budget_per_day(constraints: dict[str, Any], value: int | float) -> None:
+    constraints["budget_per_day_cad"] = value
 
 
 def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> TripState:
@@ -444,17 +460,20 @@ def intake(user_input: str, state: TripState | dict[str, Any] | None = None) -> 
 
     budget_total = _coalesce_preferred(
         _extract_budget_total(text),
-        trip_state.constraints.get("budget_total_usd"),
+        _get_budget_total(trip_state.constraints),
         _extract_budget_total(combined),
     )
     if budget_total:
-        trip_state.constraints["budget_total_usd"] = budget_total
+        _set_budget_total(trip_state.constraints, budget_total)
 
-    if trip_state.trip_overview.get("duration_days") and trip_state.constraints.get("budget_total_usd"):
+    if trip_state.trip_overview.get("duration_days") and _get_budget_total(trip_state.constraints):
         duration_days = max(1, int(trip_state.trip_overview["duration_days"]))
-        trip_state.constraints["budget_per_day_usd"] = round(
-            trip_state.constraints["budget_total_usd"] / duration_days,
-            2,
+        _set_budget_per_day(
+            trip_state.constraints,
+            round(
+                float(_get_budget_total(trip_state.constraints)) / duration_days,
+                2,
+            ),
         )
 
     group_size = _coalesce_preferred(
@@ -496,8 +515,8 @@ def _local_clarifying_questions(state: TripState) -> list[str]:
             )
         else:
             questions.append(f"How many days do you want to spend in each destination: {', '.join(destinations)}?")
-    if not state.constraints.get("budget_total_usd"):
-        questions.append("What is your total budget in USD?")
+    if not _get_budget_total(state.constraints):
+        questions.append("What is your total budget in CAD?")
     if not state.trip_overview.get("interests"):
         questions.append("What are your top interests (food, beaches, museums, nightlife, hiking)?")
     return questions[:3]
@@ -522,7 +541,7 @@ def _openai_clarifying_questions(state: TripState, model: str) -> list[str]:
     allocations = state.trip_overview.get("destination_day_allocations") or {}
     if len(destinations) > 1 and any(dest not in allocations for dest in destinations):
         missing_fields.append("days per destination")
-    if not state.constraints.get("budget_total_usd"):
+    if not _get_budget_total(state.constraints):
         missing_fields.append("budget")
     if not state.trip_overview.get("interests"):
         missing_fields.append("interests")
@@ -585,7 +604,7 @@ def retrieve(state: TripState | dict[str, Any], top_k: int = 3) -> TripState:
     query_parts = [
         " ".join(trip_state.trip_overview.get("destinations") or [])
         or trip_state.trip_overview.get("destination"),
-        "budget travel" if trip_state.constraints.get("budget_total_usd") else None,
+        "budget travel" if _get_budget_total(trip_state.constraints) else None,
         " ".join(trip_state.trip_overview.get("interests", []))
         if trip_state.trip_overview.get("interests")
         else None,
@@ -619,8 +638,8 @@ def validate(state: TripState | dict[str, Any]) -> TripState:
     destination = destination_text.lower()
     duration_days = trip_state.trip_overview.get("duration_days")
     allocations = trip_state.trip_overview.get("destination_day_allocations") or {}
-    budget_total = trip_state.constraints.get("budget_total_usd")
-    budget_per_day = trip_state.constraints.get("budget_per_day_usd")
+    budget_total = _get_budget_total(trip_state.constraints)
+    budget_per_day = _get_budget_per_day(trip_state.constraints)
     start_date = trip_state.trip_overview.get("start_date")
     end_date = trip_state.trip_overview.get("end_date")
 
@@ -671,7 +690,7 @@ def _local_generate(state: TripState) -> str:
     destination = ", ".join(destinations) or state.trip_overview.get("destination") or "your selected destination"
     duration = state.trip_overview.get("duration_days")
     allocations = state.trip_overview.get("destination_day_allocations") or {}
-    budget_total = state.constraints.get("budget_total_usd")
+    budget_total = _get_budget_total(state.constraints)
     interests = ", ".join(state.trip_overview.get("interests", [])) or "general sightseeing"
     context = format_retrieved_context(state.progress.get("retrieved_chunks", []))
     issues = state.progress.get("validation_issues", [])
@@ -687,7 +706,7 @@ def _local_generate(state: TripState) -> str:
         split = ", ".join(f"{dest}: {days} days" for dest, days in allocations.items())
         lines.append(f"- Destination split: {split}.")
     if budget_total:
-        lines.append(f"- Budget target: about ${budget_total} total.")
+        lines.append(f"- Budget target: about ${budget_total} CAD total.")
     if issues:
         lines.append("- Validation notes: " + " | ".join(issues))
     if retrieval_error:
@@ -737,7 +756,7 @@ def _core_trip_fields_complete(state: TripState) -> bool:
             return False
         if sum(int(v) for v in allocations.values()) != int(duration):
             return False
-    if not state.constraints.get("budget_total_usd"):
+    if not _get_budget_total(state.constraints):
         return False
     if not state.trip_overview.get("interests"):
         return False
@@ -758,7 +777,7 @@ def _clarification_hold_message(state: TripState) -> str:
             lines.append(f"{i}. {q}")
     else:
         lines.append(
-            "Please add: destination, trip length (days), total budget (USD), interests, and if you have multiple destinations, how many days in each "
+            "Please add: destination, trip length (days), total budget (CAD), interests, and if you have multiple destinations, how many days in each "
             "(e.g. food, temples, beaches)."
         )
     lines.extend(

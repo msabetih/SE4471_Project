@@ -27,9 +27,9 @@ Australia's island state (1-hour flight from Melbourne) is 40% national park. Th
 - **Buses:** Greyhound Australia covers the East Coast. Popular with backpackers doing the Sydney–Cairns route.
 
 ## Budget Estimates (per day)
-- Budget: $80–120 AUD (~$52–78 USD) — hostel dorms, supermarket meals, free beaches and parks
-- Moderate: $180–280 AUD (~$117–182 USD) — mid-range hotels, café breakfasts, pub dinners, day tours
-- Luxury: $400+ AUD (~$260+ USD) — boutique hotels, fine dining, helicopter tours, liveaboard reef trips
+- Budget: $80–120 AUD (~$52–78 CAD) — hostel dorms, supermarket meals, free beaches and parks
+- Moderate: $180–280 AUD (~$117–182 CAD) — mid-range hotels, café breakfasts, pub dinners, day tours
+- Luxury: $400+ AUD (~$260+ CAD) — boutique hotels, fine dining, helicopter tours, liveaboard reef trips
 
 ## Best Time to Visit
 Australia is in the Southern Hemisphere, so seasons are reversed from North America and Europe.

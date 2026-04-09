@@ -95,7 +95,7 @@ def itinerary_json_to_markdown(data: dict[str, Any]) -> str:
                     lines.append("")
                     lines.append(block)
                     lines.append("")
-            costs = d.get("estimated_costs_usd")
+            costs = d.get("estimated_costs_cad")
             if costs:
                 lines.append(f"**Estimated costs (this day):** {costs}")
                 lines.append("")
@@ -142,7 +142,8 @@ def _state_for_llm_prompt(state: TripState) -> dict[str, Any]:
     destinations = overview.get("destinations") or []
     allocations = overview.get("destination_day_allocations") or {}
     interests = overview.get("interests") or []
-    budget_total = (payload.get("constraints") or {}).get("budget_total_usd")
+    constraints = payload.get("constraints") or {}
+    budget_total = constraints.get("budget_total_cad")
     duration = overview.get("duration_days")
 
     summary_parts: list[str] = []
@@ -156,7 +157,7 @@ def _state_for_llm_prompt(state: TripState) -> dict[str, Any]:
         split = ", ".join(f"{dest}={days} days" for dest, days in allocations.items())
         summary_parts.append(f"Current destination split: {split}.")
     if budget_total:
-        summary_parts.append(f"Budget total: ${budget_total} USD.")
+        summary_parts.append(f"Budget total: ${budget_total} CAD.")
     if interests:
         summary_parts.append(f"Interests: {', '.join(interests)}.")
 
@@ -228,7 +229,7 @@ Schema (all keys required unless noted nullable):
       "morning": string,
       "afternoon": string,
       "evening": string,
-      "estimated_costs_usd": string | null,
+      "estimated_costs_cad": string | null,
       "citations": string[]
     }}
   ],
@@ -242,6 +243,7 @@ Rules:
 - {day_hint}
 - "citations" per day lists filenames or titles referenced that day.
 - "sources_used" is the deduplicated list of all corpus sources cited.
+- Express all budget and estimated cost amounts in CAD.
 - If validation issues exist, put them in planning_notes or trip_summary; use this list: {json.dumps(validation_issues)}.
 - Destination focus: {dest}
 - If multiple destinations are requested, distribute the itinerary across them in a sensible order and make the day subtitles/location choices clearly reflect those stops.
@@ -267,6 +269,7 @@ def _markdown_fallback_prompt(state: TripState, context: str, validation_issues:
 You are an expert travel planner. Produce a single Markdown document.
 
 Use TripState and retrieved context. Cite sources as (Source: filename.md) using **exact** filenames from the Retrieved context blocks only — never invent file names.
+Express all budget and estimated cost amounts in CAD.
 
 If multiple destinations are requested and TripState includes `destination_day_allocations`, that split is authoritative and must be followed exactly. Do not keep an older split from earlier turns.
 

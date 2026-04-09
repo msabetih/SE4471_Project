@@ -6,7 +6,7 @@ Budgeting for international travel requires understanding costs across several c
 ## Budget Tiers by Destination Region
 
 ### Budget Destinations (Southeast Asia, Central America, Eastern Europe, South Asia)
-These regions offer excellent value for money. Daily budgets of $25–60 USD are achievable.
+These regions offer excellent value for money. Daily budgets of $25–60 CAD are achievable.
 
 **Countries:** Thailand, Vietnam, Cambodia, Indonesia, Guatemala, Mexico (outside resort areas), Romania, Bulgaria, India, Nepal.
 
@@ -18,7 +18,7 @@ These regions offer excellent value for money. Daily budgets of $25–60 USD are
 **Key strategy:** Eat where locals eat. Street food is often fresher, more delicious, and a fraction of tourist restaurant prices.
 
 ### Mid-Range Destinations (Southern Europe, South America, Caribbean)
-Daily budgets of $80–150 USD cover comfortable travel.
+Daily budgets of $80–150 CAD cover comfortable travel.
 
 **Countries:** Spain, Portugal, Greece, Italy (outside peak season), Peru, Colombia, Costa Rica, Cuba.
 
@@ -30,7 +30,7 @@ Daily budgets of $80–150 USD cover comfortable travel.
 **Key strategy:** Eat lunch at restaurants (usually better value than dinner with set "menú del día" options) and shop at supermarkets for breakfast and snacks.
 
 ### Expensive Destinations (Western Europe, North America, Australia, Scandinavia, Japan)
-Daily budgets of $150–300+ USD are needed for comfort.
+Daily budgets of $150–300+ CAD are needed for comfort.
 
 **Countries:** France, Switzerland, Norway, UK, USA, Canada, Australia, Japan, New Zealand.
 
@@ -65,9 +65,9 @@ Non-negotiable for international travel. Costs 4–8% of total trip cost, or rou
 
 ### Visas & Entry Fees
 - Schengen Area (most of Europe): Free for many nationalities (up to 90 days). ETIAS starting 2025: €7.
-- USA ESTA: $21 USD. Valid 2 years.
-- India e-Visa: $25–100 USD depending on nationality/duration.
-- Kenya e-Visa: $50 USD.
+- USA ESTA: $21 CAD. Valid 2 years.
+- India e-Visa: $25–100 CAD depending on nationality/duration.
+- Kenya e-Visa: $50 CAD.
 - Australia ETA/eVisitor: $20 AUD or free depending on nationality.
 
 ## Currency & Money Tips
@@ -85,6 +85,6 @@ Non-negotiable for international travel. Costs 4–8% of total trip cost, or rou
 - Activities & tours: $300
 - Travel insurance: $80
 - Miscellaneous/contingency (10%): $330
-- **Total: approximately $3,670–4,070 USD per person**
+- **Total: approximately $3,670–4,070 CAD per person**
 
 Couples typically save 20–30% per person on accommodation costs by sharing rooms.

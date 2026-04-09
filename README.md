@@ -104,7 +104,7 @@ Run another request (same endpoint), and paste the exact `state` object returned
 curl -X POST http://127.0.0.1:8000/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "message":"Japan, 10 days, budget 1800 USD, interests food and culture",
+    "message":"Japan, 10 days, budget 1800 CAD, interests food and culture",
     "state": <PASTE_STATE_OBJECT_FROM_STEP_2_HERE>
   }'
 ```
@@ -133,7 +133,7 @@ Expected:
 ## Optional CLI Test (without HTTP)
 
 ```bash
-python backend/workflow.py "planning a 10 day trip to japan with a $1800 budget focused on food and culture"
+python backend/workflow.py "planning a 10 day trip to japan with a $1800 CAD budget focused on food and culture"
 
 ## Frontend (React UI)
 

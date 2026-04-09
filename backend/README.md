@@ -133,8 +133,8 @@ Example (abbreviated; your app should round-trip the real object returned by `/c
     "interests": ["food", "culture"]
   },
   "constraints": {
-    "budget_total_usd": 1800,
-    "budget_per_day_usd": 180.0,
+    "budget_total_cad": 1800,
+    "budget_per_day_cad": 180.0,
     "must_avoid": [],
     "accessibility_needs": []
   },
@@ -164,7 +164,7 @@ Example (abbreviated; your app should round-trip the real object returned by `/c
 From the repo root, you can run the pipeline and print final JSON:
 
 ```bash
-python backend/workflow.py "planning a 10 day trip to japan with a $1800 budget focused on food and culture"
+python backend/workflow.py "planning a 10 day trip to japan with a $1800 CAD budget focused on food and culture"
 ```
 
 Underspecified input may stop at clarify (no full itinerary):

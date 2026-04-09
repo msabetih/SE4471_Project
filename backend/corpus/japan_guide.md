@@ -23,9 +23,9 @@ The Peace Memorial Park and Museum offer a sobering and important historical exp
 - **Subway:** Tokyo and Osaka have extensive, reliable metro networks. Google Maps works well for navigation.
 
 ## Budget Estimates (per day)
-- Budget traveler: ¥5,000–8,000 (~$35–55 USD) — hostels, convenience store meals, free temples
-- Moderate: ¥12,000–20,000 (~$80–135 USD) — mid-range hotels, sit-down restaurants, paid attractions
-- Luxury: ¥40,000+ (~$270+ USD) — ryokan (traditional inn), kaiseki dining, private tours
+- Budget traveler: ¥5,000–8,000 (~$35–55 CAD) — hostels, convenience store meals, free temples
+- Moderate: ¥12,000–20,000 (~$80–135 CAD) — mid-range hotels, sit-down restaurants, paid attractions
+- Luxury: ¥40,000+ (~$270+ CAD) — ryokan (traditional inn), kaiseki dining, private tours
 
 ## Best Time to Visit
 - **Spring (March–May):** Cherry blossom season (sakura), most popular period — book months in advance.

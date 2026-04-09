@@ -29,9 +29,9 @@ The capital's National Mall museums (Smithsonian Institution) are free and world
 - **Uber/Lyft:** Available in virtually all cities.
 
 ## Budget Estimates (per day)
-- Budget: $80–120 USD — hostels (limited outside major cities), fast-casual food, free museums
-- Moderate: $180–280 USD — mid-range hotels, sit-down restaurants, paid attractions and tours
-- Luxury: $400+ USD — boutique hotels, fine dining, private experiences
+- Budget: $80–120 CAD — hostels (limited outside major cities), fast-casual food, free museums
+- Moderate: $180–280 CAD — mid-range hotels, sit-down restaurants, paid attractions and tours
+- Luxury: $400+ CAD — boutique hotels, fine dining, private experiences
 
 ## Best Time to Visit
 - **Northeast (NYC, D.C.):** April–June (spring) and September–October (fall) — mild temperatures, fall foliage.

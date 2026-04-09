@@ -30,9 +30,9 @@ Iquitos is the world's largest city inaccessible by road — reached only by pla
 - **Taxis / colectivos:** Negotiate prices before getting in taxis. Use Uber or Cabify in Lima.
 
 ## Budget Estimates (per day)
-- Budget: $30–50 USD — hostels, market meals (menú del día for $3–5), colectivos, student discounts at sites
-- Moderate: $80–130 USD — mid-range hotels, restaurant meals, train tickets, guided tours
-- Luxury: $250+ USD — luxury train (Belmond Hiram Bingham), Inkaterra or Belmond lodges, private guides
+- Budget: $30–50 CAD — hostels, market meals (menú del día for $3–5), colectivos, student discounts at sites
+- Moderate: $80–130 CAD — mid-range hotels, restaurant meals, train tickets, guided tours
+- Luxury: $250+ CAD — luxury train (Belmond Hiram Bingham), Inkaterra or Belmond lodges, private guides
 
 ## Best Time to Visit
 - **May–September (dry season):** Best for Machu Picchu, trekking, and the Sacred Valley. Clear skies, but cold nights at altitude.

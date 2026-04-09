@@ -15,7 +15,7 @@ from chromadb.utils import embedding_functions
 
 CORPUS_DIR = Path(__file__).parent / "corpus"
 CHROMA_PERSIST_DIR = Path(__file__).parent / ".chromadb"
-COLLECTION_NAME = "travel_corpus"
+COLLECTION_NAME = "travel_corpus_cad"
 CHUNK_SIZE = 400 # Words per chunk
 CHUNK_OVERLAP = 50  # Words of overlap between chunks
 EMBED_MODEL = "all-MiniLM-L6-v2"   # Sentence-transformer

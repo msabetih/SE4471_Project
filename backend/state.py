@@ -49,8 +49,8 @@ def _default_trip_overview() -> dict[str, Any]:
 
 def _default_constraints() -> dict[str, Any]:
     return {
-        "budget_total_usd": None,
-        "budget_per_day_usd": None,
+        "budget_total_cad": None,
+        "budget_per_day_cad": None,
         "must_avoid": [],
         "accessibility_needs": [],
     }
@@ -123,8 +123,8 @@ class TripState:
                     #keep a longer prior message if the client sends only the latest line (multi-turn).
                     if (
                         len(old) > len(val) + 20
-                        and any(x in old for x in ("USD", "budget", "trip to", "days"))
-                        and not any(x in val for x in ("USD", "budget"))
+                        and any(x in old for x in ("CAD", "budget", "trip to", "days"))
+                        and not any(x in val for x in ("CAD", "budget"))
                     ):
                         continue
                 target[key] = val

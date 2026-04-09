@@ -27,14 +27,14 @@ Cancún is a resort strip with beautiful Caribbean water — ideal for sun-and-b
 ## Transportation
 - **Domestic flights:** Affordable via VivaAerobus, Volaris, and Aeromexico. Essential for covering Mexico's large distances.
 - **ADO buses:** First-class coach network, comfortable and reliable for Yucatán, Oaxaca, and southern Mexico.
-- **Mexico City Metro:** One of the world's most extensive, very cheap ($0.25 USD per ride).
+- **Mexico City Metro:** One of the world's most extensive, very cheap ($0.25 CAD per ride).
 - **Colectivos:** Shared minivans in the Yucatán are the cheapest way to travel between towns.
 - **Uber:** Available in major cities and often safer/cheaper than street taxis.
 
 ## Budget Estimates (per day)
-- Budget: $25–45 USD — guesthouses, tacos and market meals, colectivos, cenotes
-- Moderate: $70–120 USD — mid-range hotels, restaurant meals, guided tours
-- Luxury: $200+ USD — boutique hotels, fine dining, cenote private access, helicopter tours
+- Budget: $25–45 CAD — guesthouses, tacos and market meals, colectivos, cenotes
+- Moderate: $70–120 CAD — mid-range hotels, restaurant meals, guided tours
+- Luxury: $200+ CAD — boutique hotels, fine dining, cenote private access, helicopter tours
 
 ## Best Time to Visit
 - **November–April (dry season):** Best overall. Mild temperatures in highland cities, calm Caribbean seas.
@@ -43,7 +43,7 @@ Cancún is a resort strip with beautiful Caribbean water — ideal for sun-and-b
 - Whale shark season near Isla Holbox: June–September.
 
 ## Visa & Entry
-Citizens of the USA, Canada, UK, EU, and Australia do not need a visa for tourist stays up to 180 days. A Forma Migratoria Múltiple (FMM) tourist card is issued on arrival (sometimes included in airfare, otherwise ~$25 USD). Keep your FMM — you'll need it when departing.
+Citizens of the USA, Canada, UK, EU, and Australia do not need a visa for tourist stays up to 180 days. A Forma Migratoria Múltiple (FMM) tourist card is issued on arrival (sometimes included in airfare, otherwise ~$25 CAD). Keep your FMM — you'll need it when departing.
 
 ## Safety & Tips
 - Safety varies significantly by region. Popular tourist areas (Yucatán, Oaxaca, CDMX tourist zones, Riviera Maya) are generally safe.

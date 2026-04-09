@@ -34,9 +34,9 @@ Thailand's former capital (1350–1767), just 1.5 hours from Bangkok by train. A
 - **Grab app:** Southeast Asia's ride-hailing app — more reliable and safer than negotiating with tuk-tuks for longer distances.
 
 ## Budget Estimates (per day)
-- Budget: 600–1,200 THB (~$17–35 USD) — guesthouses, street food, local transport, free temples
-- Moderate: 1,500–3,000 THB (~$43–85 USD) — mid-range hotels, restaurant meals, island ferry tickets
-- Luxury: 5,000+ THB (~$140+ USD) — beachfront resorts, private tours, spa treatments
+- Budget: 600–1,200 THB (~$17–35 CAD) — guesthouses, street food, local transport, free temples
+- Moderate: 1,500–3,000 THB (~$43–85 CAD) — mid-range hotels, restaurant meals, island ferry tickets
+- Luxury: 5,000+ THB (~$140+ CAD) — beachfront resorts, private tours, spa treatments
 
 ## Best Time to Visit
 - **November–April (cool/dry season):** Best overall. Gulf Coast islands (Koh Samui, Koh Phangan) are best November–March. Andaman Coast (Phuket, Krabi) best December–April.

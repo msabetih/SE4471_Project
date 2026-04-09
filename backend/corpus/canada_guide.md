@@ -27,9 +27,9 @@ The only walled city in North America outside of Mexico. Old Quebec (Vieux-Québ
 - **Public transit:** Toronto (TTC), Vancouver (TransLink/SkyTrain), and Montreal (STM Metro) have reliable urban transit. Other cities are very car-dependent.
 
 ## Budget Estimates (per day)
-- Budget: $80–120 CAD (~$58–88 USD) — hostels, grocery store meals, free parks and trails
-- Moderate: $180–280 CAD (~$130–205 USD) — mid-range hotels, sit-down restaurants, paid attractions
-- Luxury: $400+ CAD (~$290+ USD) — mountain lodge hotels, fine dining, heli-skiing, guided wilderness tours
+- Budget: $80–120 CAD — hostels, grocery store meals, free parks and trails
+- Moderate: $180–280 CAD — mid-range hotels, sit-down restaurants, paid attractions
+- Luxury: $400+ CAD — mountain lodge hotels, fine dining, heli-skiing, guided wilderness tours
 
 ## Best Time to Visit
 - **Canadian Rockies:** June–September for hiking (snow-free trails). Moraine Lake access: early June–mid-October. Ski season: November–April.

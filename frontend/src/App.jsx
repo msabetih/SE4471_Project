@@ -126,7 +126,7 @@ function App() {
       lines.push(`My trip ends on ${form.endDate}.`);
     }
     if (form.budget.trim()) {
-      lines.push(`My total budget is ${form.budget.trim()} USD.`);
+      lines.push(`My total budget is ${form.budget.trim()} CAD.`);
     }
     if (form.groupSize.trim()) {
       lines.push(`There are ${form.groupSize.trim()} travelers in the group.`);
@@ -443,7 +443,7 @@ function App() {
                 </label>
 
                 <label>
-                  <span>Budget (USD)</span>
+                  <span>Budget (CAD)</span>
                   <input
                     name="budget"
                     value={form.budget}
