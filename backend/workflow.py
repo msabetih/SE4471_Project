@@ -148,6 +148,16 @@ def _extract_duration_days(text: str) -> int | None:
 
 
 def _extract_budget_total(text: str) -> int | None:
+    explicit_update_patterns = [
+        r"(?:budget|total budget|new budget)\D{0,20}(?:is|to|at|of)\D{0,10}\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\b",
+        r"(?:change|make|set|update|raise|lower)\D{0,20}(?:budget|it)\D{0,20}(?:to|at)\D{0,10}\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\b",
+        r"\$?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\s*USD?\s*(?:budget|total)?\b",
+    ]
+    for pattern in explicit_update_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return int(match.group(1).replace(",", ""))
+
     range_match = re.search(r"\$?(\d{2,6})\s*(?:-|to)\s*\$?(\d{2,6})", text, re.IGNORECASE)
     if range_match:
         return int(range_match.group(2))
